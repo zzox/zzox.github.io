@@ -1,0 +1,122 @@
+{
+  "player": {
+    "anims": [
+      {
+        "key": "stand",
+        "frames": { "start": 1, "end": 1 }
+      },
+      {
+        "key": "run",
+        "frames": { "frames": [ 1, 0, 0, 1, 2, 2 ] },
+        "frameRate": 10
+      },
+      {
+        "key": "jump",
+        "frames": { "frames": [ 3, 3, 4 ] },
+        "frameRate": 5
+      },
+      {
+        "key": "swing-up",
+        "frames": { "start": 5, "end": 5 }
+      },
+      {
+        "key": "swing-down",
+        "frames": { "start": 6, "end": 6 }
+      },
+      {
+        "key": "swing-run",
+        "frames": { "start": 7, "end": 9 },
+        "frameRate": 10
+      },
+      {
+        "key": "swing-hold",
+        "frames": { "start": 8, "end": 8 }
+      },
+      {
+        "key": "throw-hold",
+        "frames": { "start": 10, "end": 10 }
+      },
+      {
+        "key": "throw",
+        "frames": { "start": 11, "end": 11 }
+      }
+    ]
+  },
+  "wand": {
+    "alias": "melee"
+  },
+  "melee": {
+    "anims": [
+      {
+        "key": "idle",
+        "frames": { "start": 0, "end": 0 }
+      },
+      {
+        "key": "up",
+        "frames": { "start": 0, "end": 0 }
+      },
+      {
+        "key": "swing",
+        "frames": { "start": 1, "end": 1 }
+      },
+      {
+        "key": "down",
+        "frames": { "start": 2, "end": 2 }
+      }
+    ]
+  },
+  "ball": {
+    "alias": "projectile"
+  },
+  "projectile": {
+    "anims": [
+      {
+        "key": "idle",
+        "frames": { "start": 0, "end": 0 }
+      },
+      {
+        "key": "move",
+        "frames": { "start": 0, "end": 3 },
+        "frameRate": 6
+      },
+      {
+        "key": "explode",
+        "frames": { "start": 4, "end": 6 },
+        "repeat": 0,
+        "frameRate": 9
+      }
+    ]
+  },
+  "hopper-purple": {
+    "alias": "enemy-simple"
+  },
+  "shooter-green": {
+    "alias": "enemy-simple"
+  },
+  "enemy-simple": {
+    "anims": [
+      {
+        "key": "idle",
+        "frames": { "start": 0, "end": 1 },
+        "frameRate": 5
+      },
+      {
+        "key": "attack",
+        "frames": { "start": 2, "end": 2 }
+      }
+    ]
+  },
+  "title": {
+    "anims": [
+      {
+        "key": "flash",
+        "frames": { "start": 1, "end": 12 },
+        "frameRate": 20
+      },
+      {
+        "key": "still",
+        "frames": { "start": 0, "end": 0 }
+      }
+    ]
+  }
+}

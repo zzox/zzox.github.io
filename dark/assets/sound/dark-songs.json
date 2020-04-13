@@ -1,0 +1,25 @@
+{
+  "resources": [
+    "dark-songs.ogg",
+    "dark-songs.m4a",
+    "dark-songs.mp3",
+    "dark-songs.ac3"
+  ],
+  "spritemap": {
+    "dark-main": {
+      "start": 0,
+      "end": 85.33333333333333,
+      "loop": false
+    },
+    "dark-one": {
+      "start": 87,
+      "end": 145.1818367346939,
+      "loop": false
+    },
+    "dark-two": {
+      "start": 147,
+      "end": 267,
+      "loop": false
+    }
+  }
+}

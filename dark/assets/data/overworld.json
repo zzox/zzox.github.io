@@ -1,0 +1,97 @@
+{
+	"worlds": [
+		{
+			"name": "one",
+			"x": 76,
+			"y": 164,
+			"forwardFlipX": false,
+			"forwardDir": "up",
+			"forward": "two"
+		},
+		{
+			"name": "two",
+			"x": 53,
+			"y": 103,
+			"backFlipX": true,
+			"backDir": "down",
+			"back": "one",
+			"forwardFlipX": false,
+			"forwardDir": "up",
+			"forward": "three"
+		},
+		{
+			"name": "three",
+			"x": 43,
+			"y": 38,
+			"backFlipX": true,
+			"backDir": "down",
+			"back": "two",
+			"forwardFlipX": true,
+			"forwardDir": "right",
+			"forward": "four"
+		},
+		{
+			"name": "four",
+			"x": 127,
+			"y": 43,
+			"backFlipX": false,
+			"backDir": "left",
+			"back": "three",
+			"forwardFlipX": true,
+			"forwardDir": "right",
+			"forward": "five"
+		},
+		{
+			"name": "five",
+			"x": 217,
+			"y": 45,
+			"backFlipX": false,
+			"backDir": "left",
+			"back": "four",
+			"forwardFlipX": false,
+			"forwardDir": "down",
+			"forward": "six"
+		},
+		{
+			"name": "six",
+			"x": 150,
+			"y": 89,
+			"backFlipX": true,
+			"backDir": "up",
+			"back": "five",
+			"forwardFlipX": true,
+			"forwardDir": "down",
+			"forward": "seven"
+		},
+		{
+			"name": "seven",
+			"x": 155,
+			"y": 160,
+			"backFlipX": true,
+			"backDir": "up",
+			"back": "six",
+			"forwardFlipX": true,
+			"forwardDir": "right",
+			"forward": "eight"
+		},
+		{
+			"name": "eight",
+			"x": 220,
+			"y": 91,
+			"backFlipX": false,
+			"backDir": "left",
+			"back": "seven",
+			"forwardFlipX": true,
+			"forwardDir": "right",
+			"forward": "nine"
+		},
+		{
+			"name": "nine",
+			"x": 293,
+			"y": 162,
+			"backFlipX": false,
+			"backDir": "left",
+			"back": "eight"
+		}
+	]
+}

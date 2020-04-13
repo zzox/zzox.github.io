@@ -1,0 +1,95 @@
+{
+  "resources": [
+    "dark-sfx.ogg",
+    "dark-sfx.m4a",
+    "dark-sfx.mp3",
+    "dark-sfx.ac3"
+  ],
+  "spritemap": {
+    "auto-shoot": {
+      "start": 0,
+      "end": 0.2409750566893424,
+      "loop": false
+    },
+    "pest-dead": {
+      "start": 2,
+      "end": 2.963877551020408,
+      "loop": false
+    },
+    "player-hold": {
+      "start": 4,
+      "end": 4.240975056689343,
+      "loop": false
+    },
+    "player-swing": {
+      "start": 6,
+      "end": 6.240975056689343,
+      "loop": false
+    },
+    "proj-explode": {
+      "start": 8,
+      "end": 8.963877551020408,
+      "loop": false
+    },
+    "door": {
+      "start": 10,
+      "end": 10.963877551020408,
+      "loop": false
+    },
+    "pest-hurt": {
+      "start": 12,
+      "end": 12.240975056689342,
+      "loop": false
+    },
+    "player-hurt": {
+      "start": 14,
+      "end": 14.240975056689342,
+      "loop": false
+    },
+    "player-throw": {
+      "start": 16,
+      "end": 16.240975056689344,
+      "loop": false
+    },
+    "game-over": {
+      "start": 18,
+      "end": 21.373514739229023,
+      "loop": false
+    },
+    "pest-jump": {
+      "start": 23,
+      "end": 23.240975056689344,
+      "loop": false
+    },
+    "player-jump": {
+      "start": 25,
+      "end": 25.240975056689344,
+      "loop": false
+    },
+    "proj-bounce": {
+      "start": 27,
+      "end": 27.240975056689344,
+      "loop": false
+    },
+    "pest-bounce": {
+      "start": 29,
+      "end": 29.240975056689344,
+      "loop": false
+    },
+    "player-double-jump": {
+      "start": 31,
+      "end": 31.240975056689344,
+      "loop": false
+    },
+    "player-land": {
+      "start": 33,
+      "end": 33.240975056689344,
+      "loop": false
+    },
+    "proj-deflect": {
+      "start": 35,
+      "end": 35.78315192743764,
+      "loop": false
+    }
+  }
+}

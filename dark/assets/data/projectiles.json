@@ -1,0 +1,16 @@
+{
+	"ball": {
+		"velocity": 450,
+		"damage": 10,
+		"blowback": 150,
+		"ammoInc": 9,
+		"maxHoldTime": 500,
+		"explodeTimer": 1500,
+		"fireTime": 150,
+		"spawnChildren": false,
+		"bounce": false,
+		"explodeGround": false,
+		"activeExplosion": false,
+		"fadeOut": true
+	}
+}
