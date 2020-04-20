@@ -1,0 +1,25 @@
+{
+  "resources": [
+    "/Users/tyler/codes/zzox/current/assets/sound/soundtrack.ogg",
+    "/Users/tyler/codes/zzox/current/assets/sound/soundtrack.m4a",
+    "/Users/tyler/codes/zzox/current/assets/sound/soundtrack.mp3",
+    "/Users/tyler/codes/zzox/current/assets/sound/soundtrack.ac3"
+  ],
+  "spritemap": {
+    "end": {
+      "start": 0,
+      "end": 83.47827664399092,
+      "loop": false
+    },
+    "level": {
+      "start": 85,
+      "end": 130,
+      "loop": false
+    },
+    "theme": {
+      "start": 131,
+      "end": 230.31036281179138,
+      "loop": false
+    }
+  }
+}

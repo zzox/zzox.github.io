@@ -1,0 +1,75 @@
+{
+  "resources": [
+    "/Users/tyler/codes/zzox/current/assets/sound/sfx.ogg",
+    "/Users/tyler/codes/zzox/current/assets/sound/sfx.m4a",
+    "/Users/tyler/codes/zzox/current/assets/sound/sfx.mp3",
+    "/Users/tyler/codes/zzox/current/assets/sound/sfx.ac3"
+  ],
+  "spritemap": {
+    "1-steps": {
+      "start": 0,
+      "end": 0.25,
+      "loop": false
+    },
+    "2-steps": {
+      "start": 2,
+      "end": 2.25,
+      "loop": false
+    },
+    "3-steps": {
+      "start": 4,
+      "end": 4.25,
+      "loop": false
+    },
+    "eaten": {
+      "start": 6,
+      "end": 7,
+      "loop": false
+    },
+    "gravity": {
+      "start": 8,
+      "end": 10,
+      "loop": false
+    },
+    "lose": {
+      "start": 11,
+      "end": 12.75,
+      "loop": false
+    },
+    "move-1": {
+      "start": 14,
+      "end": 14.5,
+      "loop": false
+    },
+    "move-2": {
+      "start": 16,
+      "end": 16.5,
+      "loop": false
+    },
+    "move-3": {
+      "start": 18,
+      "end": 18.5,
+      "loop": false
+    },
+    "move-4": {
+      "start": 20,
+      "end": 20.5,
+      "loop": false
+    },
+    "select": {
+      "start": 22,
+      "end": 22.164081632653062,
+      "loop": false
+    },
+    "shock-short": {
+      "start": 24,
+      "end": 24.15625850340136,
+      "loop": false
+    },
+    "win": {
+      "start": 26,
+      "end": 27.25,
+      "loop": false
+    }
+  }
+}
