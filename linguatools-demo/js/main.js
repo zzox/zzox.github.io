@@ -31,8 +31,8 @@ import { getSentence } from './requests.js'
     // on submitting of the form, we:
     // hide all error texts
     // send our requests to the API.
-    // if there's an error, we alert the user to which field the error is on.
     // if successful, we display the resulting sentence.
+    // if there's an error, we alert the user to which field the error is on.
     form.onsubmit = async (event) => {
         event.preventDefault()
 
@@ -51,12 +51,16 @@ import { getSentence } from './requests.js'
                 handleErrors('tense is null.')
                 loadingText.classList.add('display-none')
                 errorField.classList.remove('display-none')
+                resultBox.scrollIntoView({ behavior: 'smooth' })
                 return
             }
-            
-            const response = await getSentence(subject.value, verb.value, object.value, tense.value)
+
+            const type = document.querySelector('input[name="type"]:checked')
+
+            const response = await getSentence(subject.value, verb.value, object.value, tense.value, type && type.value)
             const result = await response.json()
 
+            resultBox.scrollIntoView({ behavior: 'smooth' })
             loadingText.classList.add('display-none')
             if (result.result === 'OK') {
                 resultField.classList.remove('display-none')
