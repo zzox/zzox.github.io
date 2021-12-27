@@ -1,0 +1,252 @@
+:root {
+  --bg1: #000000;
+  --bg2: #222034;
+  --text-color: #cbdbfc;
+  --highlight-color: #5b6ee1;
+  --highlight-color-2: #332e5f;
+  --non-playable-color: #465574;
+  --error-color: #bb1414;
+  --one-eighth-height: calc(100vh / 8);
+  --one-sixteenth-height: calc(100vh / 16);
+}
+
+body {
+  font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  background-color: var(--bg1);
+  color: var(--text-color);
+  margin: 0;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  height: 100vh;
+}
+
+main {
+  max-width: 512px;
+  width: 100%;
+  background-color: var(--bg2);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.modal {
+  position: absolute;
+  background-color: var(--bg2);
+  height: 100vh;
+  opacity: 1;
+  transition: opacity 250ms, background-color 250ms;
+  align-items: center;
+  justify-content: center;
+}
+
+a {
+  color: var(--text-color);
+}
+
+p {
+  font-size: 1.5rem;
+}
+
+h1 {
+  font-size: 3rem;
+}
+
+h2 {
+  font-size: 2.25rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+small {
+  font-size: 1.75rem;
+}
+
+h3 > small {
+  font-size: 1.33rem;
+}
+
+button {
+  background-color: inherit;
+  color: var(--text-color);
+  font-size: 1.5rem;
+  padding: 1rem;
+  border: var(--text-color) 2px solid;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  margin: 0.25rem;
+}
+
+button:hover {
+  background-color: var(--text-color);
+  color: var(--bg2);
+  font-size: 1.5rem;
+  padding: 1rem;
+  border: var(--bg2) 2px solid;
+}
+
+.scroll-box {
+  flex-grow: 2;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroll-box::-webkit-scrollbar {
+  display: none;
+}
+
+.bottom-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.tap-button {
+  height: var(--one-eighth-height);
+  flex-basis: 25%;
+  border: var(--bg1) 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  transition: font-size 50ms, background-color 50ms;
+}
+
+.pressed {
+  font-size: 2.5rem;
+  background-color: var(--highlight-color);
+}
+
+.item-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.item {
+  height: var(--one-eighth-height);
+  flex-basis: 25%;
+  border: var(--bg1) 2px solid;
+}
+
+.clear-scroll {
+  height: 100vh;
+  width: 100%;
+  border: var(--bg2) 2px solid;
+}
+
+.highlight {
+  background-color: var(--highlight-color);
+}
+
+.hit {
+  background-color: var(--bg2);
+}
+
+.missed {
+  background-color: var(--error-color);
+}
+
+#popup {
+  visibility: hidden;
+  background-color: var(--bg2);
+}
+
+#popup-buttons {
+  display: flex;
+  flex-direction: column;
+}
+
+#menu {
+  position: absolute;
+  background-color: var(--bg2);
+  opacity: 0;
+  transition: opacity 250ms;
+  visibility: hidden;
+  height: 100vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+#menu::-webkit-scrollbar {
+  display: none;
+}
+
+.menu-item {
+  margin: 0.5rem;
+  padding: 0.5rem;
+  border: var(--text-color) 2px solid;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.menu-item:hover {
+  background-color: var(--highlight-color-2);
+}
+
+.menu-item-focused {
+  background-color: var(--highlight-color-2);
+}
+
+.back-button {
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+  margin: 0.5rem;
+  border: var(--text-color) 2px solid;
+  border-radius: 0.75rem;
+}
+
+.back-button:hover {
+  background-color: var(--highlight-color-2);
+}
+
+.menu-item-left {
+  flex-basis: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.menu-item-right {
+  flex-basis: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.menu-item > * > * {
+  margin: 0.5rem;
+}
+
+.non-playable {
+  cursor: initial;
+  border: var(--non-playable-color) 2px solid;
+  color: var(--non-playable-color);
+}
+
+.non-playable:hover {
+  background-color: var(--bg2);
+}
+
+#timer {
+  position: absolute;
+  top: 0;
+  left: 1rem;
+}
+
+#dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
