@@ -542,13 +542,13 @@
     });
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
-      button.addEventListener('mousedown', () => {
+      button.addEventListener('pointerdown', () => {
         try {
           game.touchPressed(i + 1);
         } catch (e) {}
       });
 
-      button.addEventListener('mouseup', () => {
+      button.addEventListener('pointerup', () => {
         try {
           game.touchReleased(i + 1);
         } catch (e) {}
