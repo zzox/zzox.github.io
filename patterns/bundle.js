@@ -99,6 +99,9 @@
   };
 
   const OPTIONS = 4;
+  const TAP = 'tap';
+  const HIT_NOTE = 'hit-note';
+  const MISS_NOTE = 'miss-note';
   const scrollBox = document.getElementById('scroll-box');
 
   const createElements = (items) => {
@@ -130,15 +133,14 @@
     return dialog
   };
 
-  const HIT_NOTE = 'hit-note';
-  const MISS_NOTE = 'miss-note';
-
   class Game {
     constructor ({ pattern, repetitions, limit }, levelIndex, win, lose) {
       let items = [];
       for (let i = 0; i < repetitions; i++) {
         items = [...items, ...pattern];
       }
+
+      this.id = (Math.random() + '').slice(2);
 
       removeChildElements(document.getElementById('scroll-box'));
       createElements(items);
@@ -148,10 +150,13 @@
       this.timerElement = createTimer();
       this.dialogElement = createDialog();
 
-      if (State$1.instance.preferredKeys.length) {
+      const preferredKeys = State$1.instance.preferredKeys;
+      if (preferredKeys === TAP || preferredKeys.length) {
         // keep keys if stored in state
-        this.keys = State$1.instance.preferredKeys;
-        this.tapButtons.forEach((b, i) => { b.innerText = this.keys[i].toUpperCase(); });
+        this.keys = preferredKeys;
+        if (preferredKeys !== TAP) {
+          this.tapButtons.forEach((b, i) => { b.innerText = this.keys[i].toUpperCase(); });
+        }
         this.setBound();
       } else {
         this.keys = [];
@@ -178,6 +183,7 @@
       });
 
       this.update();
+      this.tapButtons[0].scrollIntoView({ block: 'end' });
     }
 
     update () {
@@ -258,7 +264,7 @@
     }
 
     keyMap (key) {
-      return this.keys.indexOf(key) + 1
+      return this.keys !== TAP && this.keys.indexOf(key) + 1
     }
 
     pressed (index) {
@@ -299,6 +305,8 @@
       if (this.gameOver) return
       // bound by tapping
       if (!this.bound && !this.keys.length) {
+        State$1.instance.preferredKeys = TAP;
+        this.keys = TAP;
         this.setBound();
         return
       }
@@ -391,14 +399,19 @@
   let game, keyListener;
   let menuItemSelected = null;
 
+  const destroyGame = () => {
+    game.destroy();
+    game = null;
+  };
+
   const gotoMainMenu = async () => {
     try {
-      game.destroy();
-      game = null;
+      destroyGame();
     } catch (e) {}
     showElement(startMenu);
     await hideElement(menuElement);
     removeChildElements(menuElement);
+    menuItemSelected = null;
   };
 
   const removeListener = () => {
@@ -406,6 +419,7 @@
   };
 
   const keydownListener = (restartCallback, escapeCallback, nextCallback) => (event) => {
+    event.preventDefault();
     switch (event.key) {
       case 'Enter':
         if (nextCallback) {
@@ -413,22 +427,18 @@
         } else {
           restartCallback();
         }
-        removeListener();
         break
       case 'n':
         if (nextCallback) {
           nextCallback();
-          removeListener();
         }
         break
       case 'r':
         restartCallback();
-        removeListener();
         break
       case 'q':
       case 'Escape':
         escapeCallback();
-        removeListener();
         break
     }
   };
@@ -439,17 +449,20 @@
     const nextCallback = () => {
       startLevel(levelIndex + 1);
       hideElement(modalElement);
+      removeListener();
     };
 
     const restartCallback = () => {
       startLevel(levelIndex);
       hideElement(modalElement);
+      removeListener();
     };
 
     const escapeCallback = () => {
       createMenu(startLevel, gotoMainMenu);
       menuItemSelected = 0;
       hideElement(modalElement);
+      removeListener();
     };
 
     keyListener = keydownListener(restartCallback, escapeCallback, nextCallback);
@@ -460,8 +473,7 @@
       { label: 'Level Select', callback: escapeCallback }
     ]);
 
-    game.destroy();
-    game = null;
+    destroyGame();
   };
 
   const lose = async (levelIndex) => {
@@ -470,12 +482,14 @@
     const restartCallback = () => {
       startLevel(levelIndex);
       hideElement(modalElement);
+      removeListener();
     };
 
     const escapeCallback = () => {
       createMenu(startLevel, gotoMainMenu);
       menuItemSelected = 0;
       hideElement(modalElement);
+      removeListener();
     };
 
     keyListener = keydownListener(restartCallback, escapeCallback);
@@ -486,19 +500,28 @@
       { label: 'Level Select', callback: escapeCallback }
     ]);
 
-    game.destroy();
-    game = null;
+    destroyGame();
   };
 
   const startLevel = (index) => {
-    game = new Game(levels[index], index, win, lose);
-    startMenu.style.opacity = 0;
-    hideMenu();
-    menuItemSelected = null;
+    // HACK: should not be needed
+    if (!game) {
+      game = new Game(levels[index], index, win, lose);
+      startMenu.style.opacity = 0;
+      hideMenu();
+      menuItemSelected = null;
+    } else {
+      console.warn(
+        'Trying to start a game with an existing instance.\n' +
+        'Not all listeners are cleaned up.'
+      );
+    }
   };
 
   const run = () => {
     document.addEventListener('keydown', (event) => {
+      event.preventDefault();
+
       const key = event.key;
       if (menuItemSelected !== null && ['ArrowUp', 'ArrowDown', 'Enter'].includes(key)) {
         const numLevels = State$1.instance.completedLevels.length;
@@ -536,19 +559,22 @@
     });
 
     document.addEventListener('keyup', (event) => {
+      event.preventDefault();
       try {
         game.keyReleased(event.key);
       } catch (e) {}
     });
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
-      button.addEventListener('pointerdown', () => {
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
         try {
           game.touchPressed(i + 1);
         } catch (e) {}
       });
 
-      button.addEventListener('pointerup', () => {
+      button.addEventListener('pointerup', (event) => {
+        event.preventDefault();
         try {
           game.touchReleased(i + 1);
         } catch (e) {}
