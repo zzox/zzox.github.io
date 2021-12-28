@@ -182,8 +182,9 @@
         b.classList.remove('missed');
       });
 
+      // for mobile
+      window.scrollTo(0, document.body.scrollHeight);
       this.update();
-      this.tapButtons[0].scrollIntoView({ block: 'end' });
     }
 
     update () {
