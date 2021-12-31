@@ -473,7 +473,7 @@
     backButton.appendChild(backText);
     challengeMenu.appendChild(backButton);
 
-    const createChallengeButton = makeDiv('back-button');
+    const createChallengeButton = makeDiv('create-challenge');
     createChallengeButton.onclick = createChallengeCallback;
     const ccText = document.createElement('h2');
     ccText.innerText = 'Create Challenge';
@@ -525,6 +525,7 @@
   const startMenu = gebi('intro');
   const modalElement = gebi('popup');
   const menuElement = gebi('menu');
+  const mainElement = gebi('main');
   const challengesElement = gebi('challenge-menu');
   const createChallengeElement = gebi('create-challenge');
   const challengeBackButton = gebi('create-challenge-back');
@@ -535,6 +536,7 @@
   let menuItemSelected = null;
 
   const destroyGame = () => {
+    hideElement(mainElement);
     game.destroy();
     game = null;
   };
@@ -701,6 +703,7 @@
   const startLevel = (index) => {
     // HACK: should not be needed
     if (!game) {
+      showElement(mainElement);
       game = new Game(levels[index], index, win, lose);
       startMenu.style.opacity = 0;
       hideMenu();
@@ -715,6 +718,7 @@
 
   const startChallenge = (index, challengeData) => {
     if (!game) {
+      showElement(mainElement);
       game = new Game(
         index === -1 ? challengeData : State$1.instance.challenges[index],
         index,
@@ -748,10 +752,10 @@
         return value
       });
 
+  // HACK: disable double tap to zoom on touch events for tap-buttons only
   const touchEventHandlers = (event) => {
     if (event.target.className.split(' ')[0] === 'tap-button') {
       event.preventDefault();
-      // event.target.click()
     }
   };
 
@@ -811,8 +815,6 @@
 
     document.addEventListener('touchstart', (event) => touchEventHandlers(event));
     document.addEventListener('touchend', (event) => touchEventHandlers(event));
-    // document.addEventListener('touchmove', (event) => touchEventHandlers(event))
-    // document.addEventListener('touchcancel', (event) => touchEventHandlers(event))
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
       button.addEventListener('pointerdown', (event) => {
