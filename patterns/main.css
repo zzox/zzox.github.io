@@ -6,8 +6,9 @@
   --highlight-color-2: #332e5f;
   --non-playable-color: #465574;
   --error-color: #bb1414;
-  --one-eighth-height: calc(100vh / 8);
-  --one-sixteenth-height: calc(100vh / 16);
+  --view-height: 100vh;
+  --one-eighth-height: calc(var(--view-height) / 8);
+  --one-sixteenth-height: calc(var(--view-height) / 16);
 }
 
 body {
@@ -15,12 +16,13 @@ body {
   background-color: var(--bg1);
   color: var(--text-color);
   margin: 0;
+  touch-action: manipulation;
 }
 
 .container {
   display: flex;
   justify-content: center;
-  height: 100vh;
+  height: var(--view-height);
 }
 
 main {
@@ -30,12 +32,22 @@ main {
   display: flex;
   flex-direction: column;
   position: relative;
+  transition: opacity 250ms;
+  height: var(--view-height);
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .modal {
   position: absolute;
-  background-color: var(--bg2);
-  height: 100vh;
   opacity: 1;
   transition: opacity 250ms, background-color 250ms;
   align-items: center;
@@ -89,6 +101,17 @@ button:hover {
   border: var(--bg2) 2px solid;
 }
 
+input {
+  background-color: var(--bg2);
+  border-bottom: var(--text-color) 2px solid;
+  height: 2rem;
+  color: var(--text-color);
+  width: 66%;
+  max-width: 90%;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
 .scroll-box {
   flex-grow: 2;
   overflow-y: scroll;
@@ -112,7 +135,7 @@ button:hover {
   flex-basis: 25%;
   border: var(--bg1) 2px solid;
   background-color: var(--bg2);
-  border-radius: 0.5rem;
+  border-radius: 12.5%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,7 +146,7 @@ button:hover {
 
 .pressed {
   font-size: 2.5rem;
-  border-radius: 1.5rem;
+  border-radius: 25%;
   background-color: var(--highlight-color);
 }
 
@@ -139,7 +162,7 @@ button:hover {
 }
 
 .clear-scroll {
-  height: 100vh;
+  height: var(--view-height);
   width: 100%;
   border: var(--bg2) 2px solid;
 }
@@ -167,16 +190,9 @@ button:hover {
 }
 
 #menu {
-  position: absolute;
-  background-color: var(--bg2);
   opacity: 0;
-  transition: opacity 250ms;
   visibility: hidden;
-  height: 100vh;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  position: absolute;
 }
 
 #menu::-webkit-scrollbar {
@@ -243,6 +259,10 @@ button:hover {
   background-color: var(--bg2);
 }
 
+.error-text {
+  color: var(--error-color);
+}
+
 #timer {
   position: absolute;
   top: 0rem;
@@ -266,4 +286,32 @@ button:hover {
   position: absolute;
   bottom: 0;
   left: 1rem;
+}
+
+#challenge-menu {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+}
+
+#create-challenge {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+}
+
+#create-challenge-back {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+}
+
+@media only screen and (max-width: 512px) {
+  #create-challenge-back {
+    top: 5rem;
+  }
+}
+
+.soft-red {
+  color: #ff6161;
 }

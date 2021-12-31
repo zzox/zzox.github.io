@@ -27,24 +27,50 @@
       this.preferredKeys = [];
     }
 
-    winChallenge ({ index, time }) {
+    winLevel ({ index, time }) {
       if (index === this.completedLevels.length) {
         this.completedLevels.push({ time });
       } else {
         if (time < this.completedLevels[index].time) {
+          this.completedLevels[index].time = time;
           return NEW_BEST
         }
       }
+
+      this.serialize();
+    }
+
+    addChallenge (challengeData) {
+      this.challenges.push(challengeData);
+      this.serialize();
+      // return the index of the challenge created
+      return this.challenges.length - 1
+    }
+
+    winChallenge ({ index, time }) {
+      if (this.challenges[index].completed && time < this.challenges[index].time) {
+        this.challenges[index].time = time;
+        return NEW_BEST
+      } else {
+        this.challenges[index].completed = true;
+        this.challenges[index].time = time;
+      }
+
+      this.serialize();
     }
 
     serialize () {
-      // write to json
       // write to storage
+      console.log('serializing', JSON.stringify({
+        completedLevels: this.completedLevels,
+        challenges: this.challenges
+      }));
     }
 
     deserialize () {
       // read from storage
       this.completedLevels = [];
+      this.challenges = [];
     }
   }
 
@@ -52,8 +78,10 @@
 
   const validKeys = 'abcdefghijklmnopqrstuvwxyz0123456789,./-='.split('');
 
-  const modalElement$1 = document.getElementById('popup');
-  const modalButtons = document.getElementById('popup-buttons');
+  const gebi = (id) => document.getElementById(id);
+
+  const modalElement$1 = gebi('popup');
+  const modalButtons = gebi('popup-buttons');
 
   const makeDiv = (className) => {
     const div = document.createElement('div');
@@ -102,7 +130,7 @@
   const TAP = 'tap';
   const HIT_NOTE = 'hit-note';
   const MISS_NOTE = 'miss-note';
-  const scrollBox = document.getElementById('scroll-box');
+  const scrollBox = gebi('scroll-box');
 
   const createElements = (items) => {
     scrollBox.appendChild(makeDiv('clear-scroll'));
@@ -134,7 +162,7 @@
   };
 
   class Game {
-    constructor ({ pattern, repetitions, limit }, levelIndex, win, lose) {
+    constructor ({ name, pattern, repetitions, limit }, levelIndex, win, lose, isChallenge = false) {
       let items = [];
       for (let i = 0; i < repetitions; i++) {
         items = [...items, ...pattern];
@@ -142,11 +170,11 @@
 
       this.id = (Math.random() + '').slice(2);
 
-      removeChildElements(document.getElementById('scroll-box'));
+      removeChildElements(gebi('scroll-box'));
       createElements(items);
       this.tapButtons = Array.from(document.querySelectorAll('.tap-button'));
       this.hitElements = Array.from(document.querySelectorAll('.item-row'));
-      this.scrollBox = document.getElementById('scroll-box');
+      this.scrollBox = gebi('scroll-box');
       this.timerElement = createTimer();
       this.dialogElement = createDialog();
 
@@ -166,12 +194,17 @@
 
       this.scrollPos = this.scrollBox.scrollTop = this.scrollBox.scrollHeight;
 
+      this.name = name;
+      this.pattern = pattern;
+      this.repetitions = repetitions;
       this.items = items;
       this.limit = limit;
       this.levelIndex = levelIndex;
+      this.isChallenge = isChallenge;
       this.startTime = null;
       this.endTime = null;
       this.gameOver = false;
+      this.nearEnd = false;
       this.results = [];
 
       this.winCallback = win;
@@ -209,6 +242,11 @@
         this.timerElement.innerHTML = timeToDisplay(this.endTime > this.limit ? this.limit : this.endTime);
       }
 
+      if (!this.nearEnd && this.startTime && currentTime / this.limit > 0.8) {
+        this.timerElement.classList.add('soft-red');
+        this.nearEnd = true;
+      }
+
       if (!this.gameOver) {
         requestAnimationFrame(this.update.bind(this));
       }
@@ -230,12 +268,34 @@
 
         this.results.push(currentTime);
 
-        if (!this.items.length) {
+        const challengeData = {
+          name: this.name,
+          pattern: this.pattern,
+          repetitions: this.repetitions,
+          limit: this.limit 
+        };
+
+        // if no items left _and_ the off chance we are over the limit
+        // but we have not hit the update frame to catch us
+        if (!this.items.length && currentTime <= this.limit) {
           this.endTime = currentTime;
           this.scrollPos = 0;
           this.gameOver = true;
-          State$1.instance.winChallenge({ index: this.levelIndex, time: currentTime });
-          this.winCallback(currentTime, this.levelIndex);
+          let newBest;
+          if (this.isChallenge) {
+            if (this.levelIndex === -1) {
+              this.levelIndex = State$1.instance.addChallenge(challengeData);
+            }
+            newBest = State$1.instance.winChallenge({ index: this.levelIndex, time: currentTime });
+          } else {
+            newBest = State$1.instance.winLevel({ index: this.levelIndex, time: currentTime });
+          }
+
+          this.winCallback(
+            currentTime,
+            this.levelIndex,
+            newBest
+          );
         } else {
           // set the scroll to the next elements top + plus its height (to get it's bottom) and then subtract that by view height
           this.scrollPos = this.hitElements[this.items.length - 1].offsetTop + this.hitElements[this.items.length - 1].clientHeight - this.scrollBox.offsetHeight;
@@ -322,7 +382,15 @@
     lose (time) {
       this.gameOver = true;
       this.endTime = time;
-      this.loseCallback(this.levelIndex);
+      this.loseCallback(
+        this.levelIndex,
+        {
+          name: this.name,
+          pattern: this.pattern,
+          repetitions: this.repetitions,
+          limit: this.limit 
+        }
+      );
     }
 
     destroy () {
@@ -330,7 +398,8 @@
     }
   }
 
-  const menu = document.getElementById('menu');
+  const menu = gebi('menu');
+  const challengeMenu = gebi('challenge-menu');
 
   const createMenu = (callback, returnCallback) => {
     // reset preferred keys
@@ -347,7 +416,7 @@
 
     menu.style.opacity = 1;
     menu.style.visibility = 'visible';
-    levels.forEach((challenge, i) => {
+    levels.forEach((level, i) => {
       const complete = i <= State$1.instance.completedLevels.length - 1;
       const playable = i <= State$1.instance.completedLevels.length;
 
@@ -364,8 +433,8 @@
       const best = document.createElement('h3');
       const completed = document.createElement('h4');
 
-      title.innerText = challenge.name;
-      limit.innerText = `${challenge.limit / 1000}s`;
+      title.innerText = level.name;
+      limit.innerText = `${level.limit / 1000}s`;
       best.innerHTML = complete
         ? `Best: ${timeToDisplay(State$1.instance.completedLevels[i].time)}`
         : '&nbsp';
@@ -392,10 +461,75 @@
     removeChildElements(menu);
   };
 
-  const startButton = document.getElementById('start');
-  const startMenu = document.getElementById('intro');
-  const modalElement = document.getElementById('popup');
-  const menuElement = document.getElementById('menu');
+  const createChallengeMenu = (callback, createChallengeCallback, returnCallback) => {
+    // reset preferred keys
+    State$1.instance.preferredKeys = [];
+
+    const backButton = makeDiv('back-button');
+    backButton.onclick = returnCallback;
+    backButton.classList.add('menu-item-focused');
+    const backText = document.createElement('h1');
+    backText.innerText = 'Back';
+    backButton.appendChild(backText);
+    challengeMenu.appendChild(backButton);
+
+    const createChallengeButton = makeDiv('back-button');
+    createChallengeButton.onclick = createChallengeCallback;
+    const ccText = document.createElement('h2');
+    ccText.innerText = 'Create Challenge';
+    createChallengeButton.appendChild(ccText);
+    challengeMenu.appendChild(createChallengeButton);
+
+    challengeMenu.style.opacity = 1;
+    challengeMenu.style.visibility = 'visible';
+    State$1.instance.challenges.forEach((challenge, i) => {
+      const div = makeDiv('menu-item');
+      const leftDiv = makeDiv('menu-item-left');
+      const rightDiv = makeDiv('menu-item-right');
+
+      const title = document.createElement('h2');
+      const limit = document.createElement('h3');
+      const best = document.createElement('h3');
+      const completed = document.createElement('h4');
+
+      title.innerText = challenge.name;
+      limit.innerText = `${challenge.limit / 1000}s`;
+      best.innerHTML = challenge.completed
+        ? `Best: ${timeToDisplay(challenge.time)}`
+        : '&nbsp';
+      completed.innerText = challenge.completed ? 'COMPLETED' : '';
+
+      div.appendChild(leftDiv);
+      div.appendChild(rightDiv);
+
+      leftDiv.appendChild(title);
+      leftDiv.appendChild(best);
+      rightDiv.appendChild(limit);
+      rightDiv.appendChild(completed);
+
+      challengeMenu.appendChild(div);
+
+      div.onclick = () => callback(i);
+    });
+  };
+
+  const hideChallengeMenu = async () => {
+    challengeMenu.style.opacity = 0;
+    await sleep(125);
+    challengeMenu.style.visibility = 'hidden';
+    removeChildElements(challengeMenu);
+  };
+
+  const startButton = gebi('start');
+  const challengesButton = gebi('challenges');
+  const startMenu = gebi('intro');
+  const modalElement = gebi('popup');
+  const menuElement = gebi('menu');
+  const challengesElement = gebi('challenge-menu');
+  const createChallengeElement = gebi('create-challenge');
+  const challengeBackButton = gebi('create-challenge-back');
+  const challengeForm = gebi('challenge-form');
+  const errorTextElement = gebi('challenge-error');
 
   let game, keyListener;
   let menuItemSelected = null;
@@ -410,8 +544,10 @@
       destroyGame();
     } catch (e) {}
     showElement(startMenu);
-    await hideElement(menuElement);
+    // HACK: hide all sub menus
+    await Promise.all([hideElement(menuElement), hideElement(challengesElement)]);
     removeChildElements(menuElement);
+    removeChildElements(challengesElement);
     menuItemSelected = null;
   };
 
@@ -420,7 +556,6 @@
   };
 
   const keydownListener = (restartCallback, escapeCallback, nextCallback) => (event) => {
-    event.preventDefault();
     switch (event.key) {
       case 'Enter':
         if (nextCallback) {
@@ -444,7 +579,7 @@
     }
   };
 
-  const win = async (time, levelIndex) => {
+  const win = async (time, levelIndex, newBest = false) => {
     await sleep(500);
 
     const nextCallback = () => {
@@ -469,7 +604,9 @@
     keyListener = keydownListener(restartCallback, escapeCallback, nextCallback);
     document.addEventListener('keydown', keyListener);
 
-    showModal('Win!', timeToDisplay(time), [
+    const displayTime = `${newBest ? 'New Best: ' : ''}${timeToDisplay(time)}`;
+
+    showModal('Win!', displayTime, [
       { label: '[N]ext', callback: nextCallback },
       { label: 'Level Select', callback: escapeCallback }
     ]);
@@ -504,6 +641,63 @@
     destroyGame();
   };
 
+  const winChallenge = async (time, levelIndex, newBest = false) => {
+    const isNewlyCompleted = levelIndex === -1;
+    await sleep(500);
+
+    const restartCallback = () => {
+      startChallenge(levelIndex);
+      hideElement(modalElement);
+      removeListener();
+    };
+
+    const escapeCallback = () => {
+      createChallengeMenu(startChallenge, createChallenge, gotoMainMenu);
+      menuItemSelected = 0;
+      hideElement(modalElement);
+      removeListener();
+    };
+
+    keyListener = keydownListener(isNewlyCompleted ? () => {} : restartCallback, escapeCallback);
+    document.addEventListener('keydown', keyListener);
+
+    const displayTime = `${newBest ? 'New Best: ' : ''}${timeToDisplay(time)}`;
+
+    showModal(isNewlyCompleted ? 'Challenge created!' : 'Win!', displayTime, [
+      { label: 'Challenge Select', callback: escapeCallback }
+    ]);
+
+    destroyGame();
+  };
+
+  const loseChallenge = async (levelIndex, challengeData) => {
+
+    await sleep(500);
+
+    const restartCallback = () => {
+      startChallenge(levelIndex, challengeData);
+      hideElement(modalElement);
+      removeListener();
+    };
+
+    const escapeCallback = () => {
+      createChallengeMenu(startChallenge, createChallenge, gotoMainMenu);
+      menuItemSelected = 0;
+      hideElement(modalElement);
+      removeListener();
+    };
+
+    keyListener = keydownListener(restartCallback, escapeCallback);
+    document.addEventListener('keydown', keyListener);
+
+    showModal('Lose...', undefined, [
+      { label: '[R]estart', callback: restartCallback },
+      { label: 'Challenge Select', callback: escapeCallback }
+    ]);
+
+    destroyGame();
+  };
+
   const startLevel = (index) => {
     // HACK: should not be needed
     if (!game) {
@@ -519,14 +713,53 @@
     }
   };
 
+  const startChallenge = (index, challengeData) => {
+    if (!game) {
+      game = new Game(
+        index === -1 ? challengeData : State$1.instance.challenges[index],
+        index,
+        winChallenge,
+        loseChallenge,
+        true
+      );
+      startMenu.style.opacity = 0;
+      hideChallengeMenu();
+      menuItemSelected = null;
+    } else {
+      console.warn(
+        'Trying to start a game with an existing instance.\n' +
+        'Not all listeners are cleaned up.'
+      );
+    }
+  };
+
+  const createChallenge = () => {
+    hideChallengeMenu();
+    showElement(createChallengeElement);
+  };
+
+  const createPattern = (pattern) =>
+    pattern.split('')
+      .map((item) => {
+        const value = parseInt(item);
+        if (typeof value !== 'number' || isNaN(value) || value < 1 || value > 4) {
+          throw new Error('Non 1-4 number in pattern')
+        }
+        return value
+      });
+
   const run = () => {
     document.addEventListener('keydown', (event) => {
-      event.preventDefault();
-
       const key = event.key;
-      if (menuItemSelected !== null && ['ArrowUp', 'ArrowDown', 'Enter'].includes(key)) {
-        const numLevels = State$1.instance.completedLevels.length;
-        const menuItems = Array.from(menuElement.children);
+
+      if (menuItemSelected !== null && ['Escape', 'ArrowUp', 'ArrowDown', 'Enter'].includes(key)) {
+        const menuType = menuElement.style.visibility === 'visible' ? 'main' : 'challenge';
+        const numLevels = menuType === 'main'
+          ? State$1.instance.completedLevels.length
+          : State$1.instance.challenges.length + 1;
+        const menuItems = menuType === 'main'
+          ? Array.from(menuElement.children)
+          : Array.from(challengesElement.children);
         menuItems.forEach(item => { item.classList.remove('menu-item-focused');});
 
         if (key === 'ArrowUp') {
@@ -550,6 +783,10 @@
         if (key === 'Enter') {
           menuItems[menuItemSelected].click();
         }
+
+        if (key === 'Escape') {
+          menuItems[0].click();
+        }
       }
 
       if (event.repeat) return
@@ -560,7 +797,6 @@
     });
 
     document.addEventListener('keyup', (event) => {
-      event.preventDefault();
       try {
         game.keyReleased(event.key);
       } catch (e) {}
@@ -590,9 +826,48 @@
 
       hideElement(startMenu);
     };
+
+    challengesButton.onclick = () => {
+      if (!game) {
+        createChallengeMenu(startChallenge, createChallenge, gotoMainMenu);
+        menuItemSelected = 0;
+      }
+
+      hideElement(startMenu);
+    };
+
+    challengeForm.onsubmit = (event) => {
+      event.preventDefault();
+      try {
+        const name = gebi('challenge-name').value;
+        const pattern = createPattern(gebi('challenge-pattern').value);
+        const repetitions = parseInt(gebi('challenge-repetitions').value);
+        const limit = parseInt(gebi('challenge-limit').value);
+        const errorTextElement = gebi('challenge-error');
+        if (!name || !pattern || !repetitions || isNaN(repetitions) || !limit || isNaN(limit)) {
+          throw new Error('Bad Input.')
+        }
+
+        startChallenge(-1, { name, pattern, repetitions, limit });
+        hideElement(createChallengeElement);
+        errorTextElement.innerText = '';
+        gebi('challenge-name').value = '';
+        gebi('challenge-pattern').value = '';
+        gebi('challenge-repetitions').value = '';
+        gebi('challenge-limit').value = '';
+      } catch (e) {
+        errorTextElement.innerText = 'Error, please try again.';
+        return
+      }
+    };
+
+    challengeBackButton.onclick = () => {
+      hideElement(createChallengeElement);
+      menuItemSelected = 0;
+      createChallengeMenu(startChallenge, createChallenge, gotoMainMenu);
+    };
   };
 
-  // TODO: remove run function if we don't need anything async
   run();
 
 })();
