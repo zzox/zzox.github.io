@@ -751,7 +751,7 @@
   const touchEventHandlers = (event) => {
     if (event.target.className.split(' ')[0] === 'tap-button') {
       event.preventDefault();
-      event.target.click();
+      // event.target.click()
     }
   };
 
@@ -809,9 +809,9 @@
       } catch (e) {}
     });
 
-    document.addEventListener('touchstart', (event) => touchEventHandlers(event));
+    // document.addEventListener('touchstart', (event) => touchEventHandlers(event))
+    document.addEventListener('touchend', (event) => touchEventHandlers(event));
     // document.addEventListener('touchmove', (event) => touchEventHandlers(event))
-    // document.addEventListener('touchend', (event) => touchEventHandlers(event))
     // document.addEventListener('touchcancel', (event) => touchEventHandlers(event))
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
