@@ -12,7 +12,7 @@
 }
 
 * {
-  touch-action: none;
+  touch-action: manipulation;
 }
 
 body {
