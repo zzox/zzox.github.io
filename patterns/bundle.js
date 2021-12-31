@@ -272,7 +272,7 @@
           name: this.name,
           pattern: this.pattern,
           repetitions: this.repetitions,
-          limit: this.limit 
+          limit: this.limit
         };
 
         // if no items left _and_ the off chance we are over the limit
@@ -388,7 +388,7 @@
           name: this.name,
           pattern: this.pattern,
           repetitions: this.repetitions,
-          limit: this.limit 
+          limit: this.limit
         }
       );
     }
@@ -801,6 +801,11 @@
         game.keyReleased(event.key);
       } catch (e) {}
     });
+
+    document.addEventListener('touchstart', (event) => event.preventDefault());
+    document.addEventListener('touchmove', (event) => event.preventDefault());
+    document.addEventListener('touchend', (event) => event.preventDefault());
+    document.addEventListener('touchcancel', (event) => event.preventDefault());
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
       button.addEventListener('pointerdown', (event) => {
