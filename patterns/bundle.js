@@ -809,7 +809,7 @@
       } catch (e) {}
     });
 
-    // document.addEventListener('touchstart', (event) => touchEventHandlers(event))
+    document.addEventListener('touchstart', (event) => touchEventHandlers(event));
     document.addEventListener('touchend', (event) => touchEventHandlers(event));
     // document.addEventListener('touchmove', (event) => touchEventHandlers(event))
     // document.addEventListener('touchcancel', (event) => touchEventHandlers(event))
