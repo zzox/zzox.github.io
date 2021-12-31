@@ -16,7 +16,7 @@ body {
   background-color: var(--bg1);
   color: var(--text-color);
   margin: 0;
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
 }
 
 .container {
