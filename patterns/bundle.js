@@ -749,9 +749,10 @@
       });
 
   const touchEventHandlers = (event) => {
-    // console.log(event.)
-    event.preventDefault();
-    event.target.click();
+    if (event.target.className.split(' ')[0] === 'tap-button') {
+      event.preventDefault();
+      event.target.click();
+    }
   };
 
   const run = () => {
@@ -809,9 +810,9 @@
     });
 
     document.addEventListener('touchstart', (event) => touchEventHandlers(event));
-    document.addEventListener('touchmove', (event) => touchEventHandlers(event));
-    document.addEventListener('touchend', (event) => touchEventHandlers(event));
-    document.addEventListener('touchcancel', (event) => touchEventHandlers(event));
+    // document.addEventListener('touchmove', (event) => touchEventHandlers(event))
+    // document.addEventListener('touchend', (event) => touchEventHandlers(event))
+    // document.addEventListener('touchcancel', (event) => touchEventHandlers(event))
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
       button.addEventListener('pointerdown', (event) => {
