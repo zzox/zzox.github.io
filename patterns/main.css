@@ -26,6 +26,11 @@ body {
   display: flex;
   justify-content: center;
   height: var(--view-height);
+  scrollbar-width: none;
+}
+
+.container::-webkit-scrollbar {
+  display: none;
 }
 
 main {
@@ -63,6 +68,11 @@ a {
 
 p {
   font-size: 1.5rem;
+  padding: 0 1rem;
+}
+
+.about-text {
+  font-size: 1.2rem;
 }
 
 h1 {
@@ -191,13 +201,13 @@ input {
   flex-direction: column;
 }
 
-#menu {
+#menu, #about {
   opacity: 0;
   visibility: hidden;
   position: absolute;
 }
 
-#menu::-webkit-scrollbar {
+#menu::-webkit-scrollbar, #about::-webkit-scrollbar {
   display: none;
 }
 
@@ -220,7 +230,7 @@ input {
   background-color: var(--highlight-color-2);
 }
 
-.back-button {
+.back-button, .create-challenge-button {
   display: flex;
   justify-content: center;
   cursor: pointer;
@@ -229,7 +239,7 @@ input {
   border-radius: 0.75rem;
 }
 
-.back-button:hover {
+.back-button:hover, .create-challenge-button:hover {
   background-color: var(--highlight-color-2);
 }
 
@@ -302,7 +312,7 @@ input {
   position: absolute;
 }
 
-#create-challenge-back {
+.menu-back {
   position: absolute;
   top: 1rem;
   left: 1rem;
