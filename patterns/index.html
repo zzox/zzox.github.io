@@ -25,8 +25,8 @@
       </p>
       <button id="start">Levels</button>
       <button id="challenges">Challenges</button>
-      <button id="about">About</button>
-      <p id="version-number">v0.3.2</p>
+      <button id="about-game">About</button>
+      <p id="version-number">v0.3.3</p>
     </main>
     <main class="modal" id="popup">
       <h1></h1>
@@ -37,7 +37,7 @@
     <main id="menu"></main>
     <main id="challenge-menu"></main>
     <main class="modal" id="create-challenge">
-      <button id="create-challenge-back" class="back-button">Back</button>
+      <button id="create-challenge-back" class="menu-back">Back</button>
       <form id="challenge-form">
         <p>Name</p>
         <input id="challenge-name"></input>
@@ -52,17 +52,31 @@
       </form>
     </main>
     <main class="modal" id="about">
-      <button id="about-back">Back</button>
+      <button id="about-back" class="menu-back">Back</button>
       <h1>About</h1>
-      <p>
-        patterns is made in HTML5 CSS and Javascript, with no , source code is available
-        <a href="https://github.com/zzox/patterns" rel="noopener noreferrer" target="_blank"></a>
-          here.
-        </a>
-        It is covered under the MIT license, feel free to alter it as you please.
+      <p class="about-text">
+        Use the keyboard (or tap any bottom button on mobile) to bind your keys to the buttons before starting.
+        Tap the button or key according to the closest note, and click all before the time limit is up.
+        Challenges can be created and sent to others via a URL, but you must complete the challenge first.
+      </p>
+      <p class="about-text">
+        patterns is made in HTML5, CSS, and Javascript and source code is available
+        <a href="https://github.com/zzox/patterns" rel="noopener noreferrer" target="_blank">here</a>.
+        It is covered under the MIT license, feel free to alter/mod it as you please.  Reach out on
+        <a href="https://twitter.com/zzo__x" rel="noopener noreferrer" target="_blank">twitter</a>
+        if you have any questsions.
+        <p class="about-text">
+          I have other games available on
+          <a href="https://zzox.itch.io" rel="noopener noreferrer" target="_blank">twitter</a>
+          and
+          <a href="https://zzox.newgrounds.com" rel="noopener noreferrer" target="_blank">newgrounds</a>.
+          This project uses the
+          <a href="https://fonts.google.com/specimen/Lexend" rel="noopener noreferrer" target="_blank">Lexend</a>
+          font.
+        </p>
       </p>
     </main>
   </div>
-  <script type="module" src="bundle.js"></script>
+  <script type="module" src="./bundle.js"></script>
 </body>
 </html>
