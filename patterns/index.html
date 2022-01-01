@@ -26,7 +26,7 @@
       <button id="start">Levels</button>
       <button id="challenges">Challenges</button>
       <button id="about">About</button>
-      <p id="version-number">v0.3.0</p>
+      <p id="version-number">v0.3.1</p>
     </main>
     <main class="modal" id="popup">
       <h1></h1>
@@ -37,7 +37,7 @@
     <main id="menu"></main>
     <main id="challenge-menu"></main>
     <main class="modal" id="create-challenge">
-      <button id="create-challenge-back">Back</button>
+      <button id="create-challenge-back" class="back-button">Back</button>
       <form id="challenge-form">
         <p>Name</p>
         <input id="challenge-name"></input>
@@ -50,6 +50,17 @@
         <button id="challenge-submit" type="submit">Submit</button>
         <p class="error-text" id="challenge-error"></p>
       </form>
+    </main>
+    <main class="modal" id="about">
+      <button id="about-back">Back</button>
+      <h1>About</h1>
+      <p>
+        patterns is made in HTML5 CSS and Javascript, with no , source code is available
+        <a href="https://github.com/zzox/patterns" rel="noopener noreferrer" target="_blank"></a>
+          here.
+        </a>
+        It is covered under the MIT license, feel free to alter it as you please.
+      </p>
     </main>
   </div>
   <script type="module" src="bundle.js"></script>

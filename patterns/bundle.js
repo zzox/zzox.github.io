@@ -281,10 +281,11 @@
           this.endTime = currentTime;
           this.scrollPos = 0;
           this.gameOver = true;
-          let newBest;
+          let newBest, isNewlyCompleted;
           if (this.isChallenge) {
             if (this.levelIndex === -1) {
               this.levelIndex = State$1.instance.addChallenge(challengeData);
+              isNewlyCompleted = true;
             }
             newBest = State$1.instance.winChallenge({ index: this.levelIndex, time: currentTime });
           } else {
@@ -294,7 +295,8 @@
           this.winCallback(
             currentTime,
             this.levelIndex,
-            newBest
+            newBest,
+            isNewlyCompleted
           );
         } else {
           // set the scroll to the next elements top + plus its height (to get it's bottom) and then subtract that by view height
@@ -473,7 +475,7 @@
     backButton.appendChild(backText);
     challengeMenu.appendChild(backButton);
 
-    const createChallengeButton = makeDiv('create-challenge');
+    const createChallengeButton = makeDiv('create-challenge-button');
     createChallengeButton.onclick = createChallengeCallback;
     const ccText = document.createElement('h2');
     ccText.innerText = 'Create Challenge';
@@ -524,6 +526,7 @@
   const challengesButton = gebi('challenges');
   const startMenu = gebi('intro');
   const modalElement = gebi('popup');
+  const aboutElement = gebi('about');
   const menuElement = gebi('menu');
   const mainElement = gebi('main');
   const challengesElement = gebi('challenge-menu');
@@ -531,6 +534,8 @@
   const challengeBackButton = gebi('create-challenge-back');
   const challengeForm = gebi('challenge-form');
   const errorTextElement = gebi('challenge-error');
+  const aboutButton = gebi('about-game');
+  const aboutBackButton = gebi('about-back');
 
   let game, keyListener;
   let menuItemSelected = null;
@@ -643,8 +648,7 @@
     destroyGame();
   };
 
-  const winChallenge = async (time, levelIndex, newBest = false) => {
-    const isNewlyCompleted = levelIndex === -1;
+  const winChallenge = async (time, levelIndex, newBest = false, isNewlyCompleted = false) => {
     await sleep(500);
 
     const restartCallback = () => {
@@ -815,6 +819,8 @@
 
     document.addEventListener('touchstart', (event) => touchEventHandlers(event));
     document.addEventListener('touchend', (event) => touchEventHandlers(event));
+    document.addEventListener('touchcancel', (event) => touchEventHandlers(event));
+    document.addEventListener('touchmove', (event) => touchEventHandlers(event));
 
     Array.from(document.querySelectorAll('.tap-button')).forEach((button, i) => {
       button.addEventListener('pointerdown', (event) => {
@@ -879,6 +885,16 @@
       hideElement(createChallengeElement);
       menuItemSelected = 0;
       createChallengeMenu(startChallenge, createChallenge, gotoMainMenu);
+    };
+
+    aboutButton.onclick = () => {
+      showElement(aboutElement);
+      hideElement(startMenu);
+    };
+
+    aboutBackButton.onclick = () => {
+      hideElement(aboutElement);
+      gotoMainMenu();
     };
   };
 
