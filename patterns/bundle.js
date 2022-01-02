@@ -1,20 +1,72 @@
 (function () {
   'use strict';
 
-  const levels = [
-    { name: 'All Up', pattern: [1, 2, 3, 4], repetitions: 2, limit: 20000 },
-    { name: 'Ten-Tap', pattern: [1], repetitions: 10, limit: 5000 },
-    { name: 'Thumb-up', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 1, limit: 10000 },
-    { name: 'Split-Tap', pattern: [1, 2], repetitions: 1, limit: 250 },
-    { name: 'All Up 2', pattern: [1, 2, 3, 4], repetitions: 8, limit: 10000 },
-    { name: 'Ten-Tap 2', pattern: [1], repetitions: 10, limit: 5000 },
-    { name: 'Thumb-up 2', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 4, limit: 8000 },
-    { name: 'Split-Tap 2', pattern: [1, 2], repetitions: 2, limit: 200 },
-    { name: 'All Up 3', pattern: [1, 2, 3, 4], repetitions: 8, limit: 8000 },
-    { name: 'Ten-Tap 3', pattern: [1], repetitions: 10, limit: 5000 },
-    { name: 'Thumb-up 3', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 8, limit: 12000 },
-    { name: 'Split-Tap 3', pattern: [1, 2], repetitions: 2, limit: 150 }
-  ];
+  const FADE_TIME = 0.1;
+
+  class Audio {
+    constructor () {
+      this.sounds = {};
+      this.audioCtx = new AudioContext();
+      this.gainNode = this.audioCtx.createGain();
+      this.gainNode.connect(this.audioCtx.destination);
+      this.gainNode.gain.value = 0;
+      this.muted = true;
+
+      this.addSound('C1');
+      this.addSound('D1');
+      this.addSound('E1');
+      this.addSound('G1');
+      this.addSound('A1');
+      this.addSound('C2');
+      this.addSound('D2');
+      this.addSound('Cmaj7');
+      this.addSound('Emin7');
+      this.addSound('Cs');
+    }
+
+    addSound (name) {
+      this.sounds[name] = { sound: null };
+
+      const request = new XMLHttpRequest();
+      request.open('GET', `./assets/${name}.mp3`);
+      request.responseType = 'arraybuffer';
+      request.onload = () => {
+        this.audioCtx.decodeAudioData(request.response, (data) => {
+          this.sounds[name].buffer = data;
+        });
+      };
+      request.send();
+    }
+
+    // create a buffer source and attach the loader buffer.
+    // attach buffer source to gain and attach a temporary
+    // audioSourceBuffer to pause if necessary
+    playSound (note) {
+      try {
+        const source = this.audioCtx.createBufferSource();
+        source.buffer = this.sounds[note].buffer;
+        source.connect(this.gainNode);
+        this.sounds[note].audio = source;
+        // reset the audio item to null when ended
+        source.addEventListener('ended', () => { this.sounds[note].audio = null; });
+        source.start();
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    mute () {
+      this.muted = !this.muted;
+      if (!this.muted) {
+        this.audioCtx.resume();
+      }
+      this.gainNode.gain.linearRampToValueAtTime(this.muted ? 0.0 : 1.0, this.audioCtx.currentTime + FADE_TIME);
+    }
+  }
+
+  var Audio$1 = { instance: new Audio() };
+
+  const patternsToken = 'zzox-patterns-results';
 
   const NEW_BEST = 'new-best';
 
@@ -60,21 +112,51 @@
     }
 
     serialize () {
-      // write to storage
-      console.log('serializing', JSON.stringify({
+      localStorage.setItem(patternsToken, JSON.stringify({
         completedLevels: this.completedLevels,
         challenges: this.challenges
       }));
     }
 
     deserialize () {
-      // read from storage
-      this.completedLevels = [];
-      this.challenges = [];
+      let storage = localStorage.getItem(patternsToken);
+      const exists = storage != null;
+      storage = JSON.parse(storage);
+
+      this.completedLevels = exists ? storage.completedLevels : [];
+      this.challenges = exists ? storage.challenges : [];
     }
   }
 
   var State$1 = { instance: new State() };
+
+  const levels = [
+    { name: 'All Up 1', pattern: [1, 2, 3, 4], repetitions: 2, limit: 5000 },
+    { name: 'All Up 2', pattern: [1, 2, 3, 4], repetitions: 4, limit: 7500 },
+    { name: 'All Up 3', pattern: [1, 2, 3, 4], repetitions: 8, limit: 10000 },
+    { name: 'Waves 1', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 2, limit: 7500 },
+    { name: 'Waves 2', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 4, limit: 10000 },
+    { name: 'Waves 3', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 8, limit: 12000 },
+    { name: 'Thumbs Up 1', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 2, limit: 5000 },
+    { name: 'Thumbs Up 2', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 4, limit: 7500 },
+    { name: 'Thumbs Up 3', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 8, limit: 10000 },
+    { name: 'Waltz 1', pattern: [1, 2, 3, 1, 2, 4], repetitions: 4, limit: 5000 },
+    { name: 'Waltz 2', pattern: [1, 2, 3, 1, 2, 4], repetitions: 8, limit: 7500 },
+    { name: 'Waltz 3', pattern: [1, 2, 3, 1, 2, 4], repetitions: 16, limit: 10000 },
+    { name: 'Depart 1', pattern: [1, 2, 4, 3, 1, 2, 4, 3, 2, 1, 3, 4, 2, 1, 3, 4], repetitions: 2, limit: 7500 },
+    { name: 'Depart 2', pattern: [1, 2, 4, 3, 1, 2, 4, 3, 2, 1, 3, 4, 2, 1, 3, 4], repetitions: 4, limit: 10000 },
+    { name: 'Ten Taps', pattern: [1], repetitions: 10, limit: 5000 },
+    { name: 'Five Taps', pattern: [1], repetitions: 5, limit: 2000 },
+    { name: 'Double Tap', pattern: [1], repetitions: 2, limit: 75 },
+    { name: 'Split Tap', pattern: [1, 2], repetitions: 1, limit: 25 },
+    { name: 'Noise', pattern: [1, 4, 3, 2, 3, 2, 2, 1, 4, 3, 2, 3, 2], repetitions: 4, limit: 10000 },
+    { name: 'Butterfly', pattern: [1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4], repetitions: 4, limit: 10000 },
+    { name: 'The Blues', pattern: [1, 1, 2, 1, 3, 1, 4, 1], repetitions: 8, limit: 10000 },
+    { name: 'Shred', pattern: [1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 1, 2, 3, 4, 4, 1, 2, 3, 4, 4, 1, 2, 3, 4], repetitions: 4, limit: 12000 },
+    { name: 'Rumble', pattern: [1, 1, 2, 1, 3, 1, 1, 2, 1, 1, 3, 1, 4, 1, 1, 1], repetitions: 4, limit: 10000 },
+    { name: 'March', pattern: [4, 1, 3, 1, 2, 1, 2, 1, 4, 1, 3, 1, 2, 1, 2, 1, 4, 2, 3, 2, 2, 2, 2, 2, 4, 2, 3, 2, 2, 2, 2, 2, 4, 3, 3, 3, 2, 3, 2, 3, 4, 3, 3, 3, 2, 3, 2, 3, 4, 4, 3, 4, 2, 4, 2, 4, 4, 4, 3, 4, 2, 4, 2, 4], repetitions: 4, limit: 60000 },
+    { name: 'Patterns', pattern: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 1, 2, 4, 1, 2, 3, 1, 2, 4, 1, 2, 1, 3, 1, 4, 1, 3, 1, 2, 4, 3, 1, 2, 4, 3], repetitions: 4, limit: 30000 },
+  ];
 
   const validKeys = 'abcdefghijklmnopqrstuvwxyz0123456789,./-='.split('');
 
@@ -93,10 +175,11 @@
     Array.from(element.children).forEach((el) => el.remove());
   };
 
-  const showModal = (title, subtext = '', buttons = []) => {
+  const showModal = (title, subtext = '', message = '', buttons = []) => {
     removeChildElements(modalButtons);
     modalElement$1.children[0].innerText = title;
     modalElement$1.children[1].innerHTML = subtext;
+    modalElement$1.children[2].innerHTML = message;
     showElement(modalElement$1);
 
     buttons.forEach(({ label, callback }) => {
@@ -126,11 +209,24 @@
     element.style.visibility = 'hidden';
   };
 
+  const assembleChallengeUrl = ({ name, limit, pattern, repetitions }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('name', name);
+    queryParams.append('limit', limit);
+    queryParams.append('pattern', pattern.join(''));
+    queryParams.append('repetitions', repetitions);
+
+    return `${window.location.href}?${queryParams.toString()}`
+  };
+
   const OPTIONS = 4;
   const TAP = 'tap';
   const HIT_NOTE = 'hit-note';
   const MISS_NOTE = 'miss-note';
   const scrollBox = gebi('scroll-box');
+
+  const correctNotes = ['C1', 'D1', 'E1', 'G1', 'A1', 'C2', 'D2'];
+  const pickNote = (key, measure) => correctNotes[measure % 4 + key - 1];
 
   const createElements = (items) => {
     scrollBox.appendChild(makeDiv('clear-scroll'));
@@ -260,11 +356,16 @@
       const item = this.items.shift();
       if (item !== key) {
         this.lose(currentTime);
+        Audio$1.instance.playSound('Cs');
         return MISS_NOTE
       } else {
         if (!this.startTime) {
           this.startTime = Date.now();
         }
+
+        Audio$1.instance.playSound(
+          pickNote(key, Math.floor(this.results.length / this.pattern.length))
+        );
 
         this.results.push(currentTime);
 
@@ -298,6 +399,8 @@
             newBest,
             isNewlyCompleted
           );
+
+          Audio$1.instance.playSound('Cmaj7');
         } else {
           // set the scroll to the next elements top + plus its height (to get it's bottom) and then subtract that by view height
           this.scrollPos = this.hitElements[this.items.length - 1].offsetTop + this.hitElements[this.items.length - 1].clientHeight - this.scrollBox.offsetHeight;
@@ -393,6 +496,8 @@
           limit: this.limit
         }
       );
+
+      Audio$1.instance.playSound('Emin7');
     }
 
     destroy () {
@@ -501,8 +606,21 @@
         : '&nbsp';
       completed.innerText = challenge.completed ? 'COMPLETED' : '';
 
+      const link = assembleChallengeUrl(challenge);
+
+      const copyButton = document.createElement('button');
+      copyButton.classList.add('challenge-link');
+      copyButton.innerText = 'Copy Challenge Link';
+      copyButton.onclick = (event) => {
+        event.stopPropagation();
+        navigator.clipboard.writeText(link).then(() => {
+          copyButton.innerText = 'Copied!';
+        });
+      };
+
       div.appendChild(leftDiv);
       div.appendChild(rightDiv);
+      div.appendChild(copyButton);
 
       leftDiv.appendChild(title);
       leftDiv.appendChild(best);
@@ -536,6 +654,7 @@
   const errorTextElement = gebi('challenge-error');
   const aboutButton = gebi('about-game');
   const aboutBackButton = gebi('about-back');
+  const muteButton = gebi('mute');
 
   let game, keyListener;
   let menuItemSelected = null;
@@ -587,7 +706,7 @@
   };
 
   const win = async (time, levelIndex, newBest = false) => {
-    await sleep(500);
+    const isLastLevel = levelIndex === levels.length - 1;
 
     const nextCallback = () => {
       startLevel(levelIndex + 1);
@@ -608,13 +727,15 @@
       removeListener();
     };
 
-    keyListener = keydownListener(restartCallback, escapeCallback, nextCallback);
+    await sleep(500);
+
+    keyListener = keydownListener(restartCallback, escapeCallback, isLastLevel ? gotoMainMenu : nextCallback);
     document.addEventListener('keydown', keyListener);
 
     const displayTime = `${newBest ? 'New Best: ' : ''}${timeToDisplay(time)}`;
 
-    showModal('Win!', displayTime, [
-      { label: '[N]ext', callback: nextCallback },
+    showModal('Win!', displayTime, isLastLevel ? 'All Levels Complete!' : '', [
+      { label: isLastLevel ? 'Quit' : '[N]ext', callback: nextCallback },
       { label: 'Level Select', callback: escapeCallback }
     ]);
 
@@ -622,8 +743,6 @@
   };
 
   const lose = async (levelIndex) => {
-    await sleep(500);
-
     const restartCallback = () => {
       startLevel(levelIndex);
       hideElement(modalElement);
@@ -637,10 +756,12 @@
       removeListener();
     };
 
+    await sleep(500);
+
     keyListener = keydownListener(restartCallback, escapeCallback);
     document.addEventListener('keydown', keyListener);
 
-    showModal('Lose...', undefined, [
+    showModal('Lose...', undefined, undefined, [
       { label: '[R]estart', callback: restartCallback },
       { label: 'Level Select', callback: escapeCallback }
     ]);
@@ -649,8 +770,6 @@
   };
 
   const winChallenge = async (time, levelIndex, newBest = false, isNewlyCompleted = false) => {
-    await sleep(500);
-
     const restartCallback = () => {
       startChallenge(levelIndex);
       hideElement(modalElement);
@@ -664,12 +783,14 @@
       removeListener();
     };
 
+    await sleep(500);
+
     keyListener = keydownListener(isNewlyCompleted ? () => {} : restartCallback, escapeCallback);
     document.addEventListener('keydown', keyListener);
 
     const displayTime = `${newBest ? 'New Best: ' : ''}${timeToDisplay(time)}`;
 
-    showModal(isNewlyCompleted ? 'Challenge created!' : 'Win!', displayTime, [
+    showModal(isNewlyCompleted ? 'Challenge created!' : 'Win!', displayTime, undefined, [
       { label: 'Challenge Select', callback: escapeCallback }
     ]);
 
@@ -677,7 +798,6 @@
   };
 
   const loseChallenge = async (levelIndex, challengeData) => {
-
     await sleep(500);
 
     const restartCallback = () => {
@@ -696,7 +816,7 @@
     keyListener = keydownListener(restartCallback, escapeCallback);
     document.addEventListener('keydown', keyListener);
 
-    showModal('Lose...', undefined, [
+    showModal('Lose...', undefined, undefined, [
       { label: '[R]estart', callback: restartCallback },
       { label: 'Challenge Select', callback: escapeCallback }
     ]);
@@ -763,6 +883,34 @@
     }
   };
 
+  const checkChallengeUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get('name');
+    let pattern = params.get('pattern');
+    let limit = params.get('limit');
+    let repetitions = params.get('repetitions');
+
+    if (name && pattern && limit && repetitions) {
+      pattern = createPattern(pattern);
+      limit = parseInt(limit);
+      repetitions = parseInt(repetitions);
+
+      const existingIndex = State$1.instance.challenges.findIndex((challenge) =>
+        name === challenge.name &&
+        pattern === challenge.pattern &&
+        limit === challenge.limit &&
+        repetitions === challenge.repetitions
+      );
+
+      if (existingIndex === -1) {
+        State$1.instance.addChallenge({ name, pattern, limit, repetitions });
+        startChallenge(State$1.instance.challenges.length - 1);
+      } else {
+        startChallenge(existingIndex);
+      }
+    }
+  };
+
   const run = () => {
     document.addEventListener('keydown', (event) => {
       const key = event.key;
@@ -775,7 +923,7 @@
         const menuItems = menuType === 'main'
           ? Array.from(menuElement.children)
           : Array.from(challengesElement.children);
-        menuItems.forEach(item => { item.classList.remove('menu-item-focused');});
+        menuItems.forEach(item => { item.classList.remove('menu-item-focused'); });
 
         if (key === 'ArrowUp') {
           menuItemSelected--;
@@ -877,7 +1025,6 @@
         gebi('challenge-limit').value = '';
       } catch (e) {
         errorTextElement.innerText = 'Error, please try again.';
-        return
       }
     };
 
@@ -896,8 +1043,15 @@
       hideElement(aboutElement);
       gotoMainMenu();
     };
+
+    muteButton.onclick = () => {
+      Audio$1.instance.mute();
+      Array.from(muteButton.children)[0].style.display = Audio$1.instance.muted ? 'inherit' : 'none';
+      Array.from(muteButton.children)[1].style.display = Audio$1.instance.muted ? 'none' : 'inherit';
+    };
   };
 
   run();
+  checkChallengeUrl();
 
 })();

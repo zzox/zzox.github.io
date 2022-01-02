@@ -11,6 +11,10 @@
   --one-sixteenth-height: calc(var(--view-height) / 16);
 }
 
+::-webkit-scrollbar {
+  display: none;
+}
+
 * {
   touch-action: manipulation;
 }
@@ -27,6 +31,7 @@ body {
   justify-content: center;
   height: var(--view-height);
   scrollbar-width: none;
+  position: relative;
 }
 
 .container::-webkit-scrollbar {
@@ -319,10 +324,6 @@ input {
 }
 
 @media only screen and (max-width: 512px) {
-  #create-challenge-back {
-    top: 5rem;
-  }
-
   .back-button {
     margin-top: 5rem;
   }
@@ -330,4 +331,33 @@ input {
 
 .soft-red {
   color: #ff6161;
+}
+
+.challenge-link {
+  width: 100%;
+}
+
+#hud {
+  position: absolute;
+}
+
+#mute {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 999;
+  cursor: pointer;
+  width: 5vh;
+}
+
+#mute > img {
+  width: 5vh;
+  height: 5vh;
+  color: var(--text-color);
+}
+
+@media only screen and (max-width: 512px) {
+  #mute {
+    top: 5rem;
+  }
 }

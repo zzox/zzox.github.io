@@ -8,6 +8,12 @@
 </head>
 <body>
   <div class="container">
+    <main id=hud>
+      <div id="mute">
+        <img src="./assets/Mute_Icon.svg" style="display: inherit;"></img>
+        <img src="./assets/Speaker_Icon.svg" style="display: none;"></img>
+      </div>
+    </main>
     <main id="main">
       <div id="scroll-box" class="scroll-box"></div>
       <div class="bottom-row">
@@ -26,7 +32,7 @@
       <button id="start">Levels</button>
       <button id="challenges">Challenges</button>
       <button id="about-game">About</button>
-      <p id="version-number">v0.3.3</p>
+      <p id="version-number">v0.4.0</p>
     </main>
     <main class="modal" id="popup">
       <h1></h1>
@@ -40,13 +46,13 @@
       <button id="create-challenge-back" class="menu-back">Back</button>
       <form id="challenge-form">
         <p>Name</p>
-        <input id="challenge-name"></input>
+        <input id="challenge-name" autocomplete="off"></input>
         <p>Pattern (e.g. 12131413)</p>
-        <input id="challenge-pattern"></input>
+        <input id="challenge-pattern" autocomplete="off"></input>
         <p>Repetitions</p>
-        <input id="challenge-repetitions"></input>
+        <input id="challenge-repetitions" autocomplete="off"></input>
         <p>Limit (in miliseconds)</p>
-        <input id="challenge-limit"></input>
+        <input id="challenge-limit" autocomplete="off"></input>
         <button id="challenge-submit" type="submit">Submit</button>
         <p class="error-text" id="challenge-error"></p>
       </form>
@@ -56,7 +62,7 @@
       <h1>About</h1>
       <p class="about-text">
         Use the keyboard (or tap any bottom button on mobile) to bind your keys to the buttons before starting.
-        Tap the button or key according to the closest note, and click all before the time limit is up.
+        Tap the button or key according to the closest note, and hit all before the time limit is up.
         Challenges can be created and sent to others via a URL, but you must complete the challenge first.
       </p>
       <p class="about-text">
@@ -64,15 +70,18 @@
         <a href="https://github.com/zzox/patterns" rel="noopener noreferrer" target="_blank">here</a>.
         It is covered under the MIT license, feel free to alter/mod it as you please.  Reach out on
         <a href="https://twitter.com/zzo__x" rel="noopener noreferrer" target="_blank">twitter</a>
-        if you have any questsions.
+        if you have any questions.
+        This project uses the
+        <a href="https://fonts.google.com/specimen/Lexend" rel="noopener noreferrer" target="_blank">Lexend</a>
+        font.
         <p class="about-text">
           I have other games available on
-          <a href="https://zzox.itch.io" rel="noopener noreferrer" target="_blank">twitter</a>
+          <a href="https://zzox.itch.io" rel="noopener noreferrer" target="_blank">itch</a>
           and
           <a href="https://zzox.newgrounds.com" rel="noopener noreferrer" target="_blank">newgrounds</a>.
-          This project uses the
-          <a href="https://fonts.google.com/specimen/Lexend" rel="noopener noreferrer" target="_blank">Lexend</a>
-          font.
+        </p>
+        <p class="about-text">
+          Please be kind to your keys.
         </p>
       </p>
     </main>
