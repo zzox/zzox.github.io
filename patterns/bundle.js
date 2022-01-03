@@ -66,9 +66,41 @@
 
   var Audio$1 = { instance: new Audio() };
 
+  const medals = {
+    '1': 66889,
+    '5': 66890,
+    '25': 66891,
+    'cc': 66892,
+    'ac': 66893
+  };
+
+  const levels$1 = [11207, 11208, 11211, 11212, 11213, 11214, 11215, 11216, 11217, 11218, 11219, 11220, 11221, 11222, 11223, 11224, 11225, 11226, 11227, 11228, 11229, 11230, 11231, 11232, 11233];
+
+  const a = '53760:CihT1kbB';
+  const b = 'Tpc43Fdp3Hio8GtwxdXiig==';
+
+  const addMedal = async (type) => {
+    const ngio = new Newgrounds.io.core(a, b);
+    ngio.callComponent('Medal.unlock', { id: medals[type] }, (r) => console.log(r));
+  };
+
+  const postScore = async (scoreboard, value) => {
+    const ngio = new Newgrounds.io.core(a, b);
+    ngio.callComponent('ScoreBoard.postScore', { id: levels$1[scoreboard], value }, (r) => console.log(r));
+  };
+
   const patternsToken = 'zzox-patterns-results';
 
   const NEW_BEST = 'new-best';
+
+  // todo: add create challenge medal
+  const checkLevel = (level, score) => {
+    if (level === 0) addMedal('1');
+    if (level === 4) addMedal('5');
+    if (level === 24) addMedal('25');
+
+    postScore(level, score);
+  };
 
   // singleton that gets game state from storage
   // keeps track of completed levels and stores them
@@ -80,6 +112,7 @@
     }
 
     winLevel ({ index, time }) {
+      checkLevel(index, time);
       if (index === this.completedLevels.length) {
         this.completedLevels.push({ time });
       } else {
@@ -132,30 +165,30 @@
 
   const levels = [
     { name: 'All Up 1', pattern: [1, 2, 3, 4], repetitions: 2, limit: 5000 },
-    { name: 'All Up 2', pattern: [1, 2, 3, 4], repetitions: 4, limit: 7500 },
-    { name: 'All Up 3', pattern: [1, 2, 3, 4], repetitions: 8, limit: 10000 },
-    { name: 'Waves 1', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 2, limit: 7500 },
-    { name: 'Waves 2', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 4, limit: 10000 },
-    { name: 'Waves 3', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 8, limit: 12000 },
-    { name: 'Thumbs Up 1', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 2, limit: 5000 },
-    { name: 'Thumbs Up 2', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 4, limit: 7500 },
-    { name: 'Thumbs Up 3', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 8, limit: 10000 },
-    { name: 'Waltz 1', pattern: [1, 2, 3, 1, 2, 4], repetitions: 4, limit: 5000 },
-    { name: 'Waltz 2', pattern: [1, 2, 3, 1, 2, 4], repetitions: 8, limit: 7500 },
-    { name: 'Waltz 3', pattern: [1, 2, 3, 1, 2, 4], repetitions: 16, limit: 10000 },
-    { name: 'Depart 1', pattern: [1, 2, 4, 3, 1, 2, 4, 3, 2, 1, 3, 4, 2, 1, 3, 4], repetitions: 2, limit: 7500 },
-    { name: 'Depart 2', pattern: [1, 2, 4, 3, 1, 2, 4, 3, 2, 1, 3, 4, 2, 1, 3, 4], repetitions: 4, limit: 10000 },
     { name: 'Ten Taps', pattern: [1], repetitions: 10, limit: 5000 },
-    { name: 'Five Taps', pattern: [1], repetitions: 5, limit: 2000 },
-    { name: 'Double Tap', pattern: [1], repetitions: 2, limit: 75 },
-    { name: 'Split Tap', pattern: [1, 2], repetitions: 1, limit: 25 },
+    { name: 'Waves 1', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 2, limit: 7500 },
+    { name: 'Thumbs Up 1', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 2, limit: 5000 },
+    { name: 'All Up 2', pattern: [1, 2, 3, 4], repetitions: 4, limit: 7500 },
+    { name: 'Waves 2', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 4, limit: 10000 },
+    { name: 'Waltz 1', pattern: [1, 2, 3, 1, 2, 4], repetitions: 4, limit: 5000 },
+    { name: 'Thumbs Up 2', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 4, limit: 7500 },
     { name: 'Noise', pattern: [1, 4, 3, 2, 3, 2, 2, 1, 4, 3, 2, 3, 2], repetitions: 4, limit: 10000 },
+    { name: 'All Up 3', pattern: [1, 2, 3, 4], repetitions: 8, limit: 10000 },
+    { name: 'Waltz 2', pattern: [1, 2, 3, 1, 2, 4], repetitions: 8, limit: 7500 },
+    { name: 'Thumbs Up 3', pattern: [1, 2, 1, 3, 1, 4, 1, 3], repetitions: 8, limit: 10000 },
+    { name: 'Depart 1', pattern: [1, 2, 4, 3, 1, 2, 4, 3, 2, 1, 3, 4, 2, 1, 3, 4], repetitions: 2, limit: 7500 },
+    { name: 'Split Tap', pattern: [1, 2], repetitions: 1, limit: 25 },
+    { name: 'Waves 3', pattern: [1, 2, 3, 4, 4, 3, 2, 1], repetitions: 8, limit: 12000 },
+    { name: 'Five Taps', pattern: [1], repetitions: 5, limit: 2000 },
+    { name: 'Waltz 3', pattern: [1, 2, 3, 1, 2, 4], repetitions: 16, limit: 10000 },
     { name: 'Butterfly', pattern: [1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4], repetitions: 4, limit: 10000 },
+    { name: 'Depart 2', pattern: [1, 2, 4, 3, 1, 2, 4, 3, 2, 1, 3, 4, 2, 1, 3, 4], repetitions: 4, limit: 10000 },
     { name: 'The Blues', pattern: [1, 1, 2, 1, 3, 1, 4, 1], repetitions: 8, limit: 10000 },
     { name: 'Shred', pattern: [1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 1, 2, 3, 4, 4, 1, 2, 3, 4, 4, 1, 2, 3, 4], repetitions: 4, limit: 12000 },
     { name: 'Rumble', pattern: [1, 1, 2, 1, 3, 1, 1, 2, 1, 1, 3, 1, 4, 1, 1, 1], repetitions: 4, limit: 10000 },
+    { name: 'Double Tap', pattern: [1], repetitions: 2, limit: 75 },
     { name: 'March', pattern: [4, 1, 3, 1, 2, 1, 2, 1, 4, 1, 3, 1, 2, 1, 2, 1, 4, 2, 3, 2, 2, 2, 2, 2, 4, 2, 3, 2, 2, 2, 2, 2, 4, 3, 3, 3, 2, 3, 2, 3, 4, 3, 3, 3, 2, 3, 2, 3, 4, 4, 3, 4, 2, 4, 2, 4, 4, 4, 3, 4, 2, 4, 2, 4], repetitions: 4, limit: 60000 },
-    { name: 'Patterns', pattern: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 1, 2, 4, 1, 2, 3, 1, 2, 4, 1, 2, 1, 3, 1, 4, 1, 3, 1, 2, 4, 3, 1, 2, 4, 3], repetitions: 4, limit: 30000 },
+    { name: 'Patterns', pattern: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 1, 2, 4, 1, 2, 3, 1, 2, 4, 1, 2, 1, 3, 1, 4, 1, 3, 1, 2, 4, 3, 1, 2, 4, 3], repetitions: 4, limit: 30000 }
   ];
 
   const validKeys = 'abcdefghijklmnopqrstuvwxyz0123456789,./-='.split('');
@@ -608,19 +641,25 @@
 
       const link = assembleChallengeUrl(challenge);
 
+      const copyLink = document.createElement('a');
+      copyLink.href = link;
+      copyLink.rel = 'noopener noreferrer';
+      copyLink.target = '_blank';
       const copyButton = document.createElement('button');
       copyButton.classList.add('challenge-link');
-      copyButton.innerText = 'Copy Challenge Link';
-      copyButton.onclick = (event) => {
-        event.stopPropagation();
-        navigator.clipboard.writeText(link).then(() => {
-          copyButton.innerText = 'Copied!';
-        });
-      };
+      copyButton.innerText = 'Challenge Link';
+      // no clipboard on ng
+      // copyButton.onclick = (event) => {
+      //   event.stopPropagation()
+      //   navigator.clipboard.writeText(link).then(() => {
+      //     copyButton.innerText = 'Copied!'
+      //   })
+      // }
+      copyLink.appendChild(copyButton);
 
       div.appendChild(leftDiv);
       div.appendChild(rightDiv);
-      div.appendChild(copyButton);
+      div.appendChild(copyLink);
 
       leftDiv.appendChild(title);
       leftDiv.appendChild(best);
@@ -795,6 +834,10 @@
     ]);
 
     destroyGame();
+
+    if (isNewlyCompleted) {
+      addMedal('cc');
+    }
   };
 
   const loseChallenge = async (levelIndex, challengeData) => {
@@ -897,14 +940,17 @@
 
       const existingIndex = State$1.instance.challenges.findIndex((challenge) =>
         name === challenge.name &&
-        pattern === challenge.pattern &&
+        JSON.stringify(pattern) === JSON.stringify(challenge.pattern) &&
         limit === challenge.limit &&
         repetitions === challenge.repetitions
       );
 
+      hideElement(startMenu);
+
       if (existingIndex === -1) {
         State$1.instance.addChallenge({ name, pattern, limit, repetitions });
         startChallenge(State$1.instance.challenges.length - 1);
+        addMedal('ac');
       } else {
         startChallenge(existingIndex);
       }

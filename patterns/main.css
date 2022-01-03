@@ -76,8 +76,26 @@ p {
   padding: 0 1rem;
 }
 
+@media only screen and (max-width: 512px) {
+  p {
+    font-size: 1.25rem;
+  }
+}
+
 .about-text {
   font-size: 1.2rem;
+}
+
+@media only screen and (max-width: 512px) {
+  .about-text {
+    font-size: 1rem;
+  }
+}
+
+@media only screen and (max-width: 350px) {
+  .about-text {
+    font-size: 0.8rem;
+  }
 }
 
 h1 {
@@ -288,7 +306,7 @@ input {
 
 @media only screen and (max-width: 512px) {
   #timer {
-    top: 5rem;
+    top: 7.5rem;
   }
 }
 
@@ -325,7 +343,7 @@ input {
 
 @media only screen and (max-width: 512px) {
   .back-button {
-    margin-top: 5rem;
+    margin-top: 7.5rem;
   }
 }
 
@@ -358,6 +376,6 @@ input {
 
 @media only screen and (max-width: 512px) {
   #mute {
-    top: 5rem;
+    top: 7.5rem;
   }
 }
