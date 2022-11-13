@@ -3,7 +3,7 @@
  <tileset firstgid="1" name="tiles" tilewidth="16" tileheight="16" tilecount="256" columns="16">
   <image source="../images/tiles.png" width="256" height="256"/>
  </tileset>
- <layer id="1" name="Tile Layer 1" width="30" height="17">
+ <layer id="1" name="collision" width="30" height="17">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
