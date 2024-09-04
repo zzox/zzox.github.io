@@ -596,7 +596,7 @@ core_Animation.prototype = {
 			forceRestart = false;
 		}
 		this.isPaused = false;
-		if(forceRestart || this.completed || this.currentAnim == null || name != this.currentAnim.name) {
+		if(forceRestart || this.currentAnim == null || name != this.currentAnim.name) {
 			this.animTime = 0;
 			this.currentAnim = this._animations.h[name];
 			this.completed = false;
@@ -31901,8 +31901,11 @@ var game_actors_Player = function(x,y) {
 	this.animation.add("jump-down-alt",[21]);
 	this.animation.add("crouch",[22]);
 	this.animation.add("super-jump",[23,24]);
+	this.animation.add("slide",[25,26,27,28,29],0.08,false);
 	this.animation.onComplete = function(anim) {
-		_gthis.animation.play("still");
+		if(anim == "blink") {
+			_gthis.animation.play("still");
+		}
 	};
 	this.bodyOffset = new core_IntVec2(96,208);
 	this.echoBody = new echo_Body({ x : x + this.bodyOffset.x, y : y + this.bodyOffset.y, drag_x : 4800, mass : 1, max_velocity_x : 960, max_velocity_y : 1920, material : new echo_Material(0.0,null,null,null,null), shape : { type : 0, width : 64, height : 24}});
@@ -32061,7 +32064,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		} else if(this.state == game_actors_PlayerState.Hanging) {
 			this.animation.play("jump-down-mid");
 		} else if(this.state == game_actors_PlayerState.Sliding) {
-			this.animation.play("crouch");
+			this.animation.play("slide");
 		} else if(this.state == game_actors_PlayerState.Crouching) {
 			this.animation.play("crouch");
 		} else if(this.state == game_actors_PlayerState.Rocket) {
@@ -32077,7 +32080,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		if(this.echoBody.acceleration.x < 0.0 && !this.flipX) {
 			this.flipX = true;
 		}
-		haxe_Log.trace(this.animation.getCurrentAnim(),{ fileName : "game/actors/Player.hx", lineNumber : 319, className : "game.actors.Player", methodName : "updateAnimation"});
+		haxe_Log.trace(this.animation.getCurrentAnim(),{ fileName : "game/actors/Player.hx", lineNumber : 322, className : "game.actors.Player", methodName : "updateAnimation"});
 	}
 	,jump: function(superJump) {
 		this.jumpTime = 0.0;
@@ -32210,6 +32213,7 @@ game_objects_Triangle.prototype = $extend(core_Sprite.prototype,{
 	,__class__: game_objects_Triangle
 });
 var game_scenes_WorldScene = function() {
+	this.sideRects = [];
 	this.rects = [];
 	this.tris = [];
 	core_Scene.call(this);
@@ -32221,6 +32225,7 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 	world: null
 	,tris: null
 	,rects: null
+	,sideRects: null
 	,player: null
 	,friend: null
 	,create: function() {
@@ -32239,7 +32244,7 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 			var t = _g1[_g];
 			++_g;
 			var tri = new game_objects_Triangle(t.v1,t.v2,t.v3);
-			haxe_Log.trace(t.v1,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 53, className : "game.scenes.WorldScene", methodName : "create", customParams : [t.v2,t.v3]});
+			haxe_Log.trace(t.v1,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 54, className : "game.scenes.WorldScene", methodName : "create", customParams : [t.v2,t.v3]});
 			this.world.add(tri.echoBody);
 			this.tris.push(tri.echoBody);
 			this.addSprite(tri);
@@ -32254,6 +32259,15 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 			this.rects.push(rect.echoBody);
 			this.addSprite(rect);
 		}
+		var _g = 0;
+		var _g1 = map.objectGroups.h["side-rects"];
+		while(_g < _g1.length) {
+			var r = _g1[_g];
+			++_g;
+			var rect = new game_objects_Rect(r.x,r.y,r.width,r.height);
+			this.world.add(rect.echoBody);
+			this.sideRects.push(rect.echoBody);
+		}
 		this.world.add(this.friend.echoBody);
 		this.addSprite(this.friend);
 		this.world.add(this.player.echoBody);
@@ -32262,6 +32276,7 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 		this.camera.startFollow(this.player);
 		this.camera.setBounds(0,0,5679,6814);
 		echo_Echo.listen(this.world,haxe_ds_Either.Left(this.player.echoBody),haxe_ds_Either.Right(this.tris),{ separate : false, stay : $bind(this,this.playerStayColl)});
+		echo_Echo.listen(this.world,haxe_ds_Either.Left(this.player.echoBody),haxe_ds_Either.Right(this.sideRects));
 		echo_Echo.listen(this.world,haxe_ds_Either.Left(this.player.echoBody),haxe_ds_Either.Right(this.rects),{ separate : false, stay : $bind(this,this.playerStayColl)});
 	}
 	,update: function(delta) {
@@ -32283,7 +32298,7 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 			this.camera.scale.set(0.25,0.25);
 		}
 		if(this.game.keys.justPressed(79)) {
-			haxe_Log.trace(this.world.members,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 115, className : "game.scenes.WorldScene", methodName : "update"});
+			haxe_Log.trace(this.world.members,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 124, className : "game.scenes.WorldScene", methodName : "update"});
 		}
 		if(this.game.keys.justPressed(70)) {
 			game_util_Debug.on = !game_util_Debug.on;
@@ -32302,7 +32317,7 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 			++_g;
 			if(i.normal.y > 0 && (this.player.groundTimer < 0.1 || this.player.echoBody.velocity.y > 0) && this.player.state != game_actors_PlayerState.Jumping && this.player.state != game_actors_PlayerState.Rocket && this.player.state != game_actors_PlayerState.Hanging) {
 				if(this.game.keys.pressed(71)) {
-					haxe_Log.trace(i.normal,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 145, className : "game.scenes.WorldScene", methodName : "playerStayColl", customParams : [this.player.state,this.player.echoBody.velocity.y]});
+					haxe_Log.trace(i.normal,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 154, className : "game.scenes.WorldScene", methodName : "playerStayColl", customParams : [this.player.state,this.player.echoBody.velocity.y]});
 				}
 				this.player.touchingGround = true;
 				echo_Echo.check(this.world,haxe_ds_Either.Left(a_),haxe_ds_Either.Left(b_));
@@ -34716,8 +34731,8 @@ var kha__$Assets_ImageList = function() {
 	this.made_with_khaDescription = { name : "made_with_kha", original_height : 32, file_sizes : [785], original_width : 32, files : ["made-with-kha.png"], type : "image"};
 	this.made_with_khaName = "made_with_kha";
 	this.made_with_kha = null;
-	this.kropSize = 154804;
-	this.kropDescription = { name : "krop", original_height : 256, file_sizes : [154804], original_width : 6400, files : ["krop.png"], type : "image"};
+	this.kropSize = 174262;
+	this.kropDescription = { name : "krop", original_height : 256, file_sizes : [174262], original_width : 7680, files : ["krop.png"], type : "image"};
 	this.kropName = "krop";
 	this.krop = null;
 	this.hotel_roomSize = 62847;
@@ -34869,8 +34884,8 @@ kha__$Assets_SoundList.prototype = {
 };
 var kha__$Assets_BlobList = function() {
 	this.names = ["index_html","test1_tmx"];
-	this.test1_tmxSize = 4821;
-	this.test1_tmxDescription = { name : "test1_tmx", file_sizes : [4821], files : ["test1.tmx"], type : "blob"};
+	this.test1_tmxSize = 7738;
+	this.test1_tmxDescription = { name : "test1_tmx", file_sizes : [7738], files : ["test1.tmx"], type : "blob"};
 	this.test1_tmxName = "test1_tmx";
 	this.test1_tmx = null;
 	this.index_htmlSize = 559;
