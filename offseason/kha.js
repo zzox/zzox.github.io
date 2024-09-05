@@ -31942,6 +31942,9 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		} else {
 			this.groundTimer += delta;
 		}
+		if(this.groundTimer < 0.1 && (this.state == game_actors_PlayerState.Falling || this.state == game_actors_PlayerState.Sliding)) {
+			this.touchingGround = true;
+		}
 		var xAccel = this.velFromInput();
 		switch(this.state._hx_index) {
 		case 0:
@@ -32003,7 +32006,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 				this.jump(true);
 			} else {
 				xAccel = 0;
-				if(Math.abs(this.echoBody.velocity.x) < 5.0) {
+				if(Math.abs(this.echoBody.velocity.x) < 10.0) {
 					if(this.input.crouchPressed) {
 						this.crouch();
 					} else {
@@ -32030,6 +32033,14 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 			xAccel = 0.0;
 			this.input.jumpBuffer = 0.1;
 			break;
+		}
+		if(this.state == game_actors_PlayerState.Running && xAccel == 0 && this.echoBody.velocity.x < 10) {
+			this.echoBody.material.gravity_scale = 0.0;
+			var v = this.echoBody.velocity;
+			v.x = 0;
+			v.y = 0;
+		} else {
+			this.echoBody.material.gravity_scale = 1.0;
 		}
 		var v = this.echoBody.acceleration;
 		v.x = xAccel * 10000;
@@ -32069,7 +32080,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 			this.animation.play("crouch");
 		} else if(this.state == game_actors_PlayerState.Rocket) {
 			this.animation.play("super-jump");
-		} else if(Math.abs(this.echoBody.velocity.x) < 5.0) {
+		} else if(Math.abs(this.echoBody.velocity.x) < 10.0) {
 			this.animation.play("still");
 		} else {
 			this.animation.play("run");
@@ -32080,7 +32091,6 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		if(this.echoBody.acceleration.x < 0.0 && !this.flipX) {
 			this.flipX = true;
 		}
-		haxe_Log.trace(this.animation.getCurrentAnim(),{ fileName : "game/actors/Player.hx", lineNumber : 322, className : "game.actors.Player", methodName : "updateAnimation"});
 	}
 	,jump: function(superJump) {
 		this.jumpTime = 0.0;
@@ -34884,8 +34894,8 @@ kha__$Assets_SoundList.prototype = {
 };
 var kha__$Assets_BlobList = function() {
 	this.names = ["index_html","test1_tmx"];
-	this.test1_tmxSize = 7738;
-	this.test1_tmxDescription = { name : "test1_tmx", file_sizes : [7738], files : ["test1.tmx"], type : "blob"};
+	this.test1_tmxSize = 7736;
+	this.test1_tmxDescription = { name : "test1_tmx", file_sizes : [7736], files : ["test1.tmx"], type : "blob"};
 	this.test1_tmxName = "test1_tmx";
 	this.test1_tmx = null;
 	this.index_htmlSize = 559;
@@ -64809,6 +64819,7 @@ game_actors_Player.AIRTIME_BUFFER = 0.1;
 game_actors_Player.JUMP_HOLD_TIME = 0.2;
 game_actors_Player.HANG_TIME = 0.1;
 game_actors_Player.ROCKET_TIME = 0.25;
+game_actors_Player.GROUND_TIME = 0.1;
 game_util_Debug.on = false;
 var game_util_InputRes_jumpKeys = [38,32,90,87];
 var game_util_InputRes_selectKeys = [32,90];
