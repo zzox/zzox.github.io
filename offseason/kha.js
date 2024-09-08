@@ -124,7 +124,7 @@ $hxClasses["Main"] = Main;
 Main.__name__ = "Main";
 Main.main = function() {
 	Main.setFullWindowCanvas();
-	new core_Game(new core_IntVec2(1280,720),new game_scenes_WorldScene(),core_ScaleMode.Full,"offseason",new core_IntVec2(1280,720),function(e) {
+	new core_Game(new core_IntVec2(1280,720),new game_scenes_RoomScene(),core_ScaleMode.Full,"offseason",new core_IntVec2(1280,720),function(e) {
 		core_Logs_sendErrorLogs(e);
 		throw haxe_Exception.thrown(e);
 	},function(item) {
@@ -850,7 +850,7 @@ core_Camera.prototype = {
 			this.scroll.y -= this.followOffset.y;
 		}
 		if(this.bounds != null) {
-			this.scroll.set(core_Util_clamp(this.scroll.x,this.bounds.x,this.bounds.x + this.bounds.width - this.width),core_Util_clamp(this.scroll.y,this.bounds.y,this.bounds.y + this.bounds.height - this.height));
+			this.scroll.set(core_Util_clamp(this.scroll.x,this.bounds.x,this.bounds.x + this.bounds.width - 1 / this.scale.x * this.width),core_Util_clamp(this.scroll.y,this.bounds.y,this.bounds.y + this.bounds.height - 1 / this.scale.y * this.height));
 		} else {
 			this.scroll.set(this.scroll.x,this.scroll.y);
 		}
@@ -31864,17 +31864,21 @@ game_actors_Friend.prototype = $extend(core_Sprite.prototype,{
 	,__class__: game_actors_Friend
 });
 var game_actors_PlayerState = $hxEnums["game.actors.PlayerState"] = { __ename__:true,__constructs__:null
-	,Running: {_hx_name:"Running",_hx_index:0,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Falling: {_hx_name:"Falling",_hx_index:1,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Jumping: {_hx_name:"Jumping",_hx_index:2,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Hanging: {_hx_name:"Hanging",_hx_index:3,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Sliding: {_hx_name:"Sliding",_hx_index:4,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Crouching: {_hx_name:"Crouching",_hx_index:5,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Rocket: {_hx_name:"Rocket",_hx_index:6,__enum__:"game.actors.PlayerState",toString:$estr}
-	,Controlled: {_hx_name:"Controlled",_hx_index:7,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Walking: {_hx_name:"Walking",_hx_index:0,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Running: {_hx_name:"Running",_hx_index:1,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Falling: {_hx_name:"Falling",_hx_index:2,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Jumping: {_hx_name:"Jumping",_hx_index:3,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Hanging: {_hx_name:"Hanging",_hx_index:4,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Sliding: {_hx_name:"Sliding",_hx_index:5,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Crouching: {_hx_name:"Crouching",_hx_index:6,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Rocket: {_hx_name:"Rocket",_hx_index:7,__enum__:"game.actors.PlayerState",toString:$estr}
+	,Controlled: {_hx_name:"Controlled",_hx_index:8,__enum__:"game.actors.PlayerState",toString:$estr}
 };
-game_actors_PlayerState.__constructs__ = [game_actors_PlayerState.Running,game_actors_PlayerState.Falling,game_actors_PlayerState.Jumping,game_actors_PlayerState.Hanging,game_actors_PlayerState.Sliding,game_actors_PlayerState.Crouching,game_actors_PlayerState.Rocket,game_actors_PlayerState.Controlled];
-var game_actors_Player = function(x,y) {
+game_actors_PlayerState.__constructs__ = [game_actors_PlayerState.Walking,game_actors_PlayerState.Running,game_actors_PlayerState.Falling,game_actors_PlayerState.Jumping,game_actors_PlayerState.Hanging,game_actors_PlayerState.Sliding,game_actors_PlayerState.Crouching,game_actors_PlayerState.Rocket,game_actors_PlayerState.Controlled];
+var game_actors_Player = function(x,y,walking) {
+	this.walking = false;
+	this.velTargetOn = true;
+	this.colNormal = new core_Vec2(0,0);
 	this.groundTimer = 0.0;
 	this.touchingGround = false;
 	this.canHang = false;
@@ -31908,14 +31912,24 @@ var game_actors_Player = function(x,y) {
 		}
 	};
 	this.bodyOffset = new core_IntVec2(96,208);
-	this.echoBody = new echo_Body({ x : x + this.bodyOffset.x, y : y + this.bodyOffset.y, drag_x : 4800, mass : 1, max_velocity_x : 960, max_velocity_y : 1920, material : new echo_Material(0.0,null,null,null,null), shape : { type : 0, width : 64, height : 24}});
+	this.echoBody = new echo_Body({ x : x + this.bodyOffset.x, y : y + this.bodyOffset.y, drag_x : 4800, mass : 1, max_velocity_x : walking ? 600 : 960, max_velocity_y : 1920, material : new echo_Material(0.0,null,null,null,null), shape : { type : 0, width : 64, height : 24}});
 	this.debugRect = new core_Sprite(new core_Vec2(0,0));
 	this.debugRect.makeRect(-65281,new core_IntVec2(64,24));
 	this.debugRect.alpha = 0.3;
+	this.debugNormal = new core_Sprite(new core_Vec2(0,0));
+	this.debugNormal.alpha = 0.5;
+	this.debugVel = new core_Sprite(new core_Vec2(0,0));
+	this.debugVel.alpha = 0.5;
 	this.addChild(this.debugRect);
+	this.addChild(this.debugNormal);
+	this.addChild(this.debugVel);
 	this.input = new game_util_InputRes();
 	this.input.jumpBuffer = 0.1;
 	this.input.crouchBuffer = 0.1;
+	this.walking = walking;
+	if(walking) {
+		this.state = game_actors_PlayerState.Walking;
+	}
 };
 $hxClasses["game.actors.Player"] = game_actors_Player;
 game_actors_Player.__name__ = "game.actors.Player";
@@ -31931,10 +31945,15 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 	,canHang: null
 	,touchingGround: null
 	,groundTimer: null
+	,colNormal: null
+	,velTargetOn: null
 	,echoBody: null
 	,bodyOffset: null
 	,debugRect: null
+	,debugNormal: null
+	,debugVel: null
 	,input: null
+	,walking: null
 	,update: function(delta) {
 		this.input.update(delta,this.scene.game.keys);
 		if(this.touchingGround) {
@@ -31948,6 +31967,8 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		var xAccel = this.velFromInput();
 		switch(this.state._hx_index) {
 		case 0:
+			break;
+		case 1:
 			var v = this.echoBody.drag;
 			v.x = 4800;
 			v.y = 0;
@@ -31968,7 +31989,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 				xAccel *= 3;
 			}
 			break;
-		case 1:
+		case 2:
 			var v = this.echoBody.drag;
 			v.x = 2400;
 			v.y = 0;
@@ -31983,14 +32004,14 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 				this.hang();
 			}
 			break;
-		case 2:
+		case 3:
 			this.echoBody.velocity.y = this.isSuperJumping ? -1500. : -900.;
 			this.jumpTime += delta;
 			if(this.touchingGround || this.jumpTime > 0.2 || !this.input.jumpPressed) {
 				this.fall();
 			}
 			break;
-		case 3:
+		case 4:
 			if(this.hangTime > 0) {
 				this.hangTime -= delta;
 				if(this.hangTime < 0 || !this.input.jumpPressed) {
@@ -31998,7 +32019,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 				}
 			}
 			break;
-		case 4:
+		case 5:
 			if(!this.touchingGround) {
 				this.fall();
 			}
@@ -32015,7 +32036,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 				}
 			}
 			break;
-		case 5:
+		case 6:
 			if(!this.input.crouchPressed) {
 				this.land();
 			} else if(this.input.jumpJustPressed) {
@@ -32023,18 +32044,18 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 			}
 			xAccel = 0;
 			break;
-		case 6:
+		case 7:
 			this.rocketTime -= delta;
 			if(this.rocketTime <= 0) {
 				this.fall();
 			}
 			break;
-		case 7:
+		case 8:
 			xAccel = 0.0;
 			this.input.jumpBuffer = 0.1;
 			break;
 		}
-		if(this.state == game_actors_PlayerState.Running && xAccel == 0 && this.echoBody.velocity.x < 10) {
+		if((this.state == game_actors_PlayerState.Running || this.state == game_actors_PlayerState.Sliding) && xAccel == 0 && Math.abs(this.echoBody.velocity.x) < 10) {
 			this.echoBody.material.gravity_scale = 0.0;
 			var v = this.echoBody.velocity;
 			v.x = 0;
@@ -32045,11 +32066,21 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		var v = this.echoBody.acceleration;
 		v.x = xAccel * 10000;
 		v.y = 0;
+		haxe_Log.trace(this.echoBody.max_velocity.x,{ fileName : "game/actors/Player.hx", lineNumber : 280, className : "game.actors.Player", methodName : "update"});
+		if(this.state != game_actors_PlayerState.Walking && this.velTargetOn) {
+			this.echoBody.max_velocity.x = core_Util_clamp(this.echoBody.max_velocity.x - delta * 960,960,this.echoBody.max_velocity.x);
+		}
 		this.updateAnimation();
 		core_Sprite.prototype.update.call(this,delta);
 		this.setPosition(this.echoBody.transform.local_x - this.bodyOffset.x - 32,this.echoBody.transform.local_y - this.bodyOffset.y - 12);
 		this.debugRect.setPosition(this.echoBody.transform.local_x - 32,this.echoBody.transform.local_y - 12);
 		this.debugRect.visible = game_util_Debug.on;
+		this.debugNormal.setPosition(this.echoBody.transform.local_x + 32,this.echoBody.transform.local_y + 12);
+		this.debugNormal.makeLine(new core_Vec2(this.debugNormal.x + this.colNormal.x * 128,this.debugNormal.y + this.colNormal.y * 128),8,-65296);
+		this.debugNormal.visible = game_util_Debug.on;
+		this.debugVel.setPosition(this.echoBody.transform.local_x + 32,this.echoBody.transform.local_y + 12);
+		this.debugVel.makeLine(new core_Vec2(this.debugVel.x + this.echoBody.velocity.x,this.debugVel.y + this.echoBody.velocity.y),8,-16715521);
+		this.debugVel.visible = game_util_Debug.on;
 	}
 	,velFromInput: function() {
 		var vel = 0;
@@ -32062,7 +32093,13 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		return vel;
 	}
 	,updateAnimation: function() {
-		if(this.state == game_actors_PlayerState.Falling || this.state == game_actors_PlayerState.Jumping) {
+		if(this.state == game_actors_PlayerState.Walking) {
+			if(Math.abs(this.echoBody.velocity.x) < 10.0) {
+				this.animation.play("still");
+			} else {
+				this.animation.play("walk");
+			}
+		} else if(this.state == game_actors_PlayerState.Falling || this.state == game_actors_PlayerState.Jumping) {
 			if(this.echoBody.velocity.y < 0) {
 				if(this.isSuperJumping) {
 					this.animation.play("super-jump");
@@ -32113,6 +32150,7 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		if(Math.abs(this.echoBody.velocity.x) > 0) {
 			this.state = game_actors_PlayerState.Sliding;
 			this.echoBody.velocity.x *= 2;
+			this.echoBody.velocity.y += Math.abs(this.echoBody.velocity.x * this.colNormal.x);
 			this.highMaxXVel();
 		} else {
 			this.crouch();
@@ -32147,10 +32185,9 @@ game_actors_Player.prototype = $extend(core_Sprite.prototype,{
 		this.state = game_actors_PlayerState.Running;
 	}
 	,lowMaxXVel: function() {
-		this.echoBody.max_velocity.x = 960;
 	}
 	,highMaxXVel: function() {
-		this.echoBody.max_velocity.x = 1920;
+		this.echoBody.max_velocity.x = core_Util_clamp(this.echoBody.velocity.x,960,1920);
 	}
 	,__class__: game_actors_Player
 });
@@ -32222,20 +32259,113 @@ game_objects_Triangle.prototype = $extend(core_Sprite.prototype,{
 	}
 	,__class__: game_objects_Triangle
 });
-var game_scenes_WorldScene = function() {
+var game_scenes_GameScene = function() {
+	core_Scene.call(this);
+};
+$hxClasses["game.scenes.GameScene"] = game_scenes_GameScene;
+game_scenes_GameScene.__name__ = "game.scenes.GameScene";
+game_scenes_GameScene.__super__ = core_Scene;
+game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
+	update: function(delta) {
+		if(this.game.keys.pressed(173)) {
+			this.camera.scale.x -= 0.01;
+			this.camera.scale.y -= 0.01;
+		}
+		if(this.game.keys.pressed(61)) {
+			this.camera.scale.x += 0.01;
+			this.camera.scale.y += 0.01;
+		}
+		if(this.game.keys.pressed(49)) {
+			this.camera.scale.set(1.0,1.0);
+		}
+		if(this.game.keys.pressed(50)) {
+			this.camera.scale.set(0.5,0.5);
+		}
+		if(this.game.keys.pressed(51)) {
+			this.camera.scale.set(0.25,0.25);
+		}
+		if(this.game.keys.justPressed(70)) {
+			game_util_Debug.on = !game_util_Debug.on;
+		}
+		if(this.game.keys.justPressed(82)) {
+			this.game.switchScene(new game_scenes_RoomScene());
+		}
+		if(this.game.keys.justPressed(84)) {
+			this.game.switchScene(new game_scenes_WorldScene());
+		}
+		core_Scene.prototype.update.call(this,delta);
+	}
+	,__class__: game_scenes_GameScene
+});
+var game_scenes_RoomScene = function() {
 	this.sideRects = [];
 	this.rects = [];
 	this.tris = [];
-	core_Scene.call(this);
+	game_scenes_GameScene.call(this);
 };
-$hxClasses["game.scenes.WorldScene"] = game_scenes_WorldScene;
-game_scenes_WorldScene.__name__ = "game.scenes.WorldScene";
-game_scenes_WorldScene.__super__ = core_Scene;
-game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
+$hxClasses["game.scenes.RoomScene"] = game_scenes_RoomScene;
+game_scenes_RoomScene.__name__ = "game.scenes.RoomScene";
+game_scenes_RoomScene.__super__ = game_scenes_GameScene;
+game_scenes_RoomScene.prototype = $extend(game_scenes_GameScene.prototype,{
 	world: null
 	,tris: null
 	,rects: null
 	,sideRects: null
+	,player: null
+	,friend: null
+	,roomBg: null
+	,create: function() {
+		this.camera.bgColor = -15726033;
+		this.addSprite(this.roomBg = new core_Sprite(new core_Vec2(0,0),kha_Assets.images.hotel_room));
+		this.world = echo_Echo.start({ width : 10000, height : 10000, gravity_y : 3200, iterations : 2});
+		this.player = new game_actors_Player(200,0,true);
+		this.friend = new game_actors_Friend(100,0,this.player);
+		var _g = 0;
+		var _g1 = game_scenes_RoomScene_roomRects;
+		while(_g < _g1.length) {
+			var r = _g1[_g];
+			++_g;
+			var rect = new game_objects_Rect(r.x,r.y,r.width,r.height);
+			this.world.add(rect.echoBody);
+			this.sideRects.push(rect.echoBody);
+			this.addSprite(rect);
+		}
+		haxe_Log.trace(kha_Assets.images.hotel_room.get_realHeight(),{ fileName : "game/scenes/RoomScene.hx", lineNumber : 55, className : "game.scenes.RoomScene", methodName : "create"});
+		haxe_Log.trace(kha_Assets.images.hotel_room.get_realWidth(),{ fileName : "game/scenes/RoomScene.hx", lineNumber : 56, className : "game.scenes.RoomScene", methodName : "create"});
+		this.world.add(this.friend.echoBody);
+		this.addSprite(this.friend);
+		this.world.add(this.player.echoBody);
+		this.addSprite(this.player);
+		this.camera.scale.set(0.5,0.5);
+		this.camera.startFollow(this.roomBg);
+		echo_Echo.listen(this.world,haxe_ds_Either.Left(this.player.echoBody),haxe_ds_Either.Right(this.sideRects),{ stay : $bind(this,this.playerStayColl)});
+	}
+	,update: function(delta) {
+		this.player.touchingGround = false;
+		echo_Echo.step(this.world,delta);
+		game_scenes_GameScene.prototype.update.call(this,delta);
+	}
+	,playerStayColl: function(a_,b_,d) {
+		this.player.touchingGround = true;
+	}
+	,__class__: game_scenes_RoomScene
+});
+var game_scenes_WorldScene = function() {
+	this.bgSprites = [];
+	this.sideRects = [];
+	this.rects = [];
+	this.tris = [];
+	game_scenes_GameScene.call(this);
+};
+$hxClasses["game.scenes.WorldScene"] = game_scenes_WorldScene;
+game_scenes_WorldScene.__name__ = "game.scenes.WorldScene";
+game_scenes_WorldScene.__super__ = game_scenes_GameScene;
+game_scenes_WorldScene.prototype = $extend(game_scenes_GameScene.prototype,{
+	world: null
+	,tris: null
+	,rects: null
+	,sideRects: null
+	,bgSprites: null
 	,player: null
 	,friend: null
 	,create: function() {
@@ -32244,9 +32374,23 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 		var middle = new core_Sprite(new core_Vec2(0,0),kha_Assets.images.world_middle);
 		middle.scrollFactor.set(0.0,0.0);
 		this.addSprite(middle);
-		this.addSprite(new core_Sprite(new core_Vec2(0,0),kha_Assets.images.world_top));
+		var rows = 4;
+		var columns = 3;
+		var _g = 0;
+		var _g1 = rows;
+		while(_g < _g1) {
+			var row = _g++;
+			var _g2 = 0;
+			var _g3 = columns;
+			while(_g2 < _g3) {
+				var column = _g2++;
+				var bgSprite = new core_Sprite(new core_Vec2(column * 2048,row * 2048),kha_Assets.images.get("world_row_" + (row + 1) + "_column_" + (column + 1)));
+				this.addSprite(bgSprite);
+				this.bgSprites.push(bgSprite);
+			}
+		}
 		this.world = echo_Echo.start({ width : 10000, height : 10000, gravity_y : 3200, iterations : 2});
-		this.player = new game_actors_Player(3724,5808);
+		this.player = new game_actors_Player(3724,5808,false);
 		this.friend = new game_actors_Friend(3724,5808,this.player);
 		var _g = 0;
 		var _g1 = map.triangleGroups.h["tris"];
@@ -32254,7 +32398,7 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 			var t = _g1[_g];
 			++_g;
 			var tri = new game_objects_Triangle(t.v1,t.v2,t.v3);
-			haxe_Log.trace(t.v1,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 54, className : "game.scenes.WorldScene", methodName : "create", customParams : [t.v2,t.v3]});
+			haxe_Log.trace(t.v1,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 64, className : "game.scenes.WorldScene", methodName : "create", customParams : [t.v2,t.v3]});
 			this.world.add(tri.echoBody);
 			this.tris.push(tri.echoBody);
 			this.addSprite(tri);
@@ -32290,35 +32434,16 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 		echo_Echo.listen(this.world,haxe_ds_Either.Left(this.player.echoBody),haxe_ds_Either.Right(this.rects),{ separate : false, stay : $bind(this,this.playerStayColl)});
 	}
 	,update: function(delta) {
-		if(this.game.keys.pressed(173)) {
-			this.camera.scale.x -= 0.01;
-			this.camera.scale.y -= 0.01;
-		}
-		if(this.game.keys.pressed(61)) {
-			this.camera.scale.x += 0.01;
-			this.camera.scale.y += 0.01;
-		}
-		if(this.game.keys.pressed(49)) {
-			this.camera.scale.set(1.0,1.0);
-		}
-		if(this.game.keys.pressed(50)) {
-			this.camera.scale.set(0.5,0.5);
-		}
-		if(this.game.keys.pressed(51)) {
-			this.camera.scale.set(0.25,0.25);
-		}
-		if(this.game.keys.justPressed(79)) {
-			haxe_Log.trace(this.world.members,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 124, className : "game.scenes.WorldScene", methodName : "update"});
-		}
-		if(this.game.keys.justPressed(70)) {
-			game_util_Debug.on = !game_util_Debug.on;
-		}
-		if(this.game.keys.justPressed(82)) {
-			this.game.switchScene(new game_scenes_WorldScene());
-		}
 		this.player.touchingGround = false;
 		echo_Echo.step(this.world,delta);
-		core_Scene.prototype.update.call(this,delta);
+		var _g = 0;
+		var _g1 = this.bgSprites;
+		while(_g < _g1.length) {
+			var bg = _g1[_g];
+			++_g;
+			bg.visible = core_Util_rectOverlap(this.camera.scroll.x,this.camera.scroll.y,this.camera.width * (1 / this.camera.scale.x),this.camera.height * (1 / this.camera.scale.y),bg.x,bg.y,bg.size.x,bg.size.y);
+		}
+		game_scenes_GameScene.prototype.update.call(this,delta);
 	}
 	,playerStayColl: function(a_,b_,d) {
 		var _g = 0;
@@ -32327,9 +32452,10 @@ game_scenes_WorldScene.prototype = $extend(core_Scene.prototype,{
 			++_g;
 			if(i.normal.y > 0 && (this.player.groundTimer < 0.1 || this.player.echoBody.velocity.y > 0) && this.player.state != game_actors_PlayerState.Jumping && this.player.state != game_actors_PlayerState.Rocket && this.player.state != game_actors_PlayerState.Hanging) {
 				if(this.game.keys.pressed(71)) {
-					haxe_Log.trace(i.normal,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 154, className : "game.scenes.WorldScene", methodName : "playerStayColl", customParams : [this.player.state,this.player.echoBody.velocity.y]});
+					haxe_Log.trace(i.normal,{ fileName : "game/scenes/WorldScene.hx", lineNumber : 139, className : "game.scenes.WorldScene", methodName : "playerStayColl", customParams : [this.player.state,this.player.echoBody.velocity.y]});
 				}
 				this.player.touchingGround = true;
+				this.player.colNormal.set(i.normal.x,i.normal.y);
 				echo_Echo.check(this.world,haxe_ds_Either.Left(a_),haxe_ds_Either.Left(b_));
 			}
 		}
@@ -34716,11 +34842,55 @@ js_lib__$ArrayBuffer_ArrayBufferCompat.sliceImpl = function(begin,end) {
 	return resultArray.buffer;
 };
 var kha__$Assets_ImageList = function() {
-	this.names = ["bat_bulb","hotel_room","krop","made_with_kha","simli","sprout_lad","sprout_lad_sheet_temp","world_middle","world_top"];
-	this.world_topSize = 1163260;
-	this.world_topDescription = { name : "world_top", original_height : 6814, file_sizes : [1163260], original_width : 5679, files : ["world-top.png"], type : "image"};
-	this.world_topName = "world_top";
-	this.world_top = null;
+	this.names = ["bat_bulb","hotel_room","krop","made_with_kha","simli","sprout_lad","sprout_lad_sheet_temp","world_middle","world_row_1_column_1","world_row_1_column_2","world_row_1_column_3","world_row_2_column_1","world_row_2_column_2","world_row_2_column_3","world_row_3_column_1","world_row_3_column_2","world_row_3_column_3","world_row_4_column_1","world_row_4_column_2","world_row_4_column_3"];
+	this.world_row_4_column_3Size = 85473;
+	this.world_row_4_column_3Description = { name : "world_row_4_column_3", original_height : 670, file_sizes : [85473], original_width : 1583, files : ["world-row-4-column-3.png"], type : "image"};
+	this.world_row_4_column_3Name = "world_row_4_column_3";
+	this.world_row_4_column_3 = null;
+	this.world_row_4_column_2Size = 77776;
+	this.world_row_4_column_2Description = { name : "world_row_4_column_2", original_height : 670, file_sizes : [77776], original_width : 2048, files : ["world-row-4-column-2.png"], type : "image"};
+	this.world_row_4_column_2Name = "world_row_4_column_2";
+	this.world_row_4_column_2 = null;
+	this.world_row_4_column_1Size = 111532;
+	this.world_row_4_column_1Description = { name : "world_row_4_column_1", original_height : 670, file_sizes : [111532], original_width : 2048, files : ["world-row-4-column-1.png"], type : "image"};
+	this.world_row_4_column_1Name = "world_row_4_column_1";
+	this.world_row_4_column_1 = null;
+	this.world_row_3_column_3Size = 234709;
+	this.world_row_3_column_3Description = { name : "world_row_3_column_3", original_height : 2048, file_sizes : [234709], original_width : 1583, files : ["world-row-3-column-3.png"], type : "image"};
+	this.world_row_3_column_3Name = "world_row_3_column_3";
+	this.world_row_3_column_3 = null;
+	this.world_row_3_column_2Size = 465908;
+	this.world_row_3_column_2Description = { name : "world_row_3_column_2", original_height : 2048, file_sizes : [465908], original_width : 2048, files : ["world-row-3-column-2.png"], type : "image"};
+	this.world_row_3_column_2Name = "world_row_3_column_2";
+	this.world_row_3_column_2 = null;
+	this.world_row_3_column_1Size = 187931;
+	this.world_row_3_column_1Description = { name : "world_row_3_column_1", original_height : 2048, file_sizes : [187931], original_width : 2048, files : ["world-row-3-column-1.png"], type : "image"};
+	this.world_row_3_column_1Name = "world_row_3_column_1";
+	this.world_row_3_column_1 = null;
+	this.world_row_2_column_3Size = 111358;
+	this.world_row_2_column_3Description = { name : "world_row_2_column_3", original_height : 2048, file_sizes : [111358], original_width : 1583, files : ["world-row-2-column-3.png"], type : "image"};
+	this.world_row_2_column_3Name = "world_row_2_column_3";
+	this.world_row_2_column_3 = null;
+	this.world_row_2_column_2Size = 330469;
+	this.world_row_2_column_2Description = { name : "world_row_2_column_2", original_height : 2048, file_sizes : [330469], original_width : 2048, files : ["world-row-2-column-2.png"], type : "image"};
+	this.world_row_2_column_2Name = "world_row_2_column_2";
+	this.world_row_2_column_2 = null;
+	this.world_row_2_column_1Size = 141986;
+	this.world_row_2_column_1Description = { name : "world_row_2_column_1", original_height : 2048, file_sizes : [141986], original_width : 2048, files : ["world-row-2-column-1.png"], type : "image"};
+	this.world_row_2_column_1Name = "world_row_2_column_1";
+	this.world_row_2_column_1 = null;
+	this.world_row_1_column_3Size = 33892;
+	this.world_row_1_column_3Description = { name : "world_row_1_column_3", original_height : 2048, file_sizes : [33892], original_width : 1583, files : ["world-row-1-column-3.png"], type : "image"};
+	this.world_row_1_column_3Name = "world_row_1_column_3";
+	this.world_row_1_column_3 = null;
+	this.world_row_1_column_2Size = 188353;
+	this.world_row_1_column_2Description = { name : "world_row_1_column_2", original_height : 2048, file_sizes : [188353], original_width : 2048, files : ["world-row-1-column-2.png"], type : "image"};
+	this.world_row_1_column_2Name = "world_row_1_column_2";
+	this.world_row_1_column_2 = null;
+	this.world_row_1_column_1Size = 23208;
+	this.world_row_1_column_1Description = { name : "world_row_1_column_1", original_height : 2048, file_sizes : [23208], original_width : 2048, files : ["world-row-1-column-1.png"], type : "image"};
+	this.world_row_1_column_1Name = "world_row_1_column_1";
+	this.world_row_1_column_1 = null;
 	this.world_middleSize = 293974;
 	this.world_middleDescription = { name : "world_middle", original_height : 6814, file_sizes : [293974], original_width : 5679, files : ["world-middle.png"], type : "image"};
 	this.world_middleName = "world_middle";
@@ -34737,12 +34907,12 @@ var kha__$Assets_ImageList = function() {
 	this.simliDescription = { name : "simli", original_height : 256, file_sizes : [63650], original_width : 2816, files : ["simli.png"], type : "image"};
 	this.simliName = "simli";
 	this.simli = null;
-	this.made_with_khaSize = 785;
-	this.made_with_khaDescription = { name : "made_with_kha", original_height : 32, file_sizes : [785], original_width : 32, files : ["made-with-kha.png"], type : "image"};
+	this.made_with_khaSize = 2106;
+	this.made_with_khaDescription = { name : "made_with_kha", original_height : 256, file_sizes : [2106], original_width : 256, files : ["made-with-kha.png"], type : "image"};
 	this.made_with_khaName = "made_with_kha";
 	this.made_with_kha = null;
-	this.kropSize = 174262;
-	this.kropDescription = { name : "krop", original_height : 256, file_sizes : [174262], original_width : 7680, files : ["krop.png"], type : "image"};
+	this.kropSize = 197024;
+	this.kropDescription = { name : "krop", original_height : 1024, file_sizes : [197024], original_width : 2048, files : ["krop.png"], type : "image"};
 	this.kropName = "krop";
 	this.krop = null;
 	this.hotel_roomSize = 62847;
@@ -34864,18 +35034,161 @@ kha__$Assets_ImageList.prototype = {
 		this.world_middle.unload();
 		this.world_middle = null;
 	}
-	,world_top: null
-	,world_topName: null
-	,world_topDescription: null
-	,world_topSize: null
-	,world_topLoad: function(done,failure) {
-		kha_Assets.loadImage("world_top",function(image) {
+	,world_row_1_column_1: null
+	,world_row_1_column_1Name: null
+	,world_row_1_column_1Description: null
+	,world_row_1_column_1Size: null
+	,world_row_1_column_1Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_1_column_1",function(image) {
 			done();
-		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_topLoad"});
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_1_column_1Load"});
 	}
-	,world_topUnload: function() {
-		this.world_top.unload();
-		this.world_top = null;
+	,world_row_1_column_1Unload: function() {
+		this.world_row_1_column_1.unload();
+		this.world_row_1_column_1 = null;
+	}
+	,world_row_1_column_2: null
+	,world_row_1_column_2Name: null
+	,world_row_1_column_2Description: null
+	,world_row_1_column_2Size: null
+	,world_row_1_column_2Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_1_column_2",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_1_column_2Load"});
+	}
+	,world_row_1_column_2Unload: function() {
+		this.world_row_1_column_2.unload();
+		this.world_row_1_column_2 = null;
+	}
+	,world_row_1_column_3: null
+	,world_row_1_column_3Name: null
+	,world_row_1_column_3Description: null
+	,world_row_1_column_3Size: null
+	,world_row_1_column_3Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_1_column_3",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_1_column_3Load"});
+	}
+	,world_row_1_column_3Unload: function() {
+		this.world_row_1_column_3.unload();
+		this.world_row_1_column_3 = null;
+	}
+	,world_row_2_column_1: null
+	,world_row_2_column_1Name: null
+	,world_row_2_column_1Description: null
+	,world_row_2_column_1Size: null
+	,world_row_2_column_1Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_2_column_1",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_2_column_1Load"});
+	}
+	,world_row_2_column_1Unload: function() {
+		this.world_row_2_column_1.unload();
+		this.world_row_2_column_1 = null;
+	}
+	,world_row_2_column_2: null
+	,world_row_2_column_2Name: null
+	,world_row_2_column_2Description: null
+	,world_row_2_column_2Size: null
+	,world_row_2_column_2Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_2_column_2",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_2_column_2Load"});
+	}
+	,world_row_2_column_2Unload: function() {
+		this.world_row_2_column_2.unload();
+		this.world_row_2_column_2 = null;
+	}
+	,world_row_2_column_3: null
+	,world_row_2_column_3Name: null
+	,world_row_2_column_3Description: null
+	,world_row_2_column_3Size: null
+	,world_row_2_column_3Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_2_column_3",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_2_column_3Load"});
+	}
+	,world_row_2_column_3Unload: function() {
+		this.world_row_2_column_3.unload();
+		this.world_row_2_column_3 = null;
+	}
+	,world_row_3_column_1: null
+	,world_row_3_column_1Name: null
+	,world_row_3_column_1Description: null
+	,world_row_3_column_1Size: null
+	,world_row_3_column_1Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_3_column_1",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_3_column_1Load"});
+	}
+	,world_row_3_column_1Unload: function() {
+		this.world_row_3_column_1.unload();
+		this.world_row_3_column_1 = null;
+	}
+	,world_row_3_column_2: null
+	,world_row_3_column_2Name: null
+	,world_row_3_column_2Description: null
+	,world_row_3_column_2Size: null
+	,world_row_3_column_2Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_3_column_2",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_3_column_2Load"});
+	}
+	,world_row_3_column_2Unload: function() {
+		this.world_row_3_column_2.unload();
+		this.world_row_3_column_2 = null;
+	}
+	,world_row_3_column_3: null
+	,world_row_3_column_3Name: null
+	,world_row_3_column_3Description: null
+	,world_row_3_column_3Size: null
+	,world_row_3_column_3Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_3_column_3",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_3_column_3Load"});
+	}
+	,world_row_3_column_3Unload: function() {
+		this.world_row_3_column_3.unload();
+		this.world_row_3_column_3 = null;
+	}
+	,world_row_4_column_1: null
+	,world_row_4_column_1Name: null
+	,world_row_4_column_1Description: null
+	,world_row_4_column_1Size: null
+	,world_row_4_column_1Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_4_column_1",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_4_column_1Load"});
+	}
+	,world_row_4_column_1Unload: function() {
+		this.world_row_4_column_1.unload();
+		this.world_row_4_column_1 = null;
+	}
+	,world_row_4_column_2: null
+	,world_row_4_column_2Name: null
+	,world_row_4_column_2Description: null
+	,world_row_4_column_2Size: null
+	,world_row_4_column_2Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_4_column_2",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_4_column_2Load"});
+	}
+	,world_row_4_column_2Unload: function() {
+		this.world_row_4_column_2.unload();
+		this.world_row_4_column_2 = null;
+	}
+	,world_row_4_column_3: null
+	,world_row_4_column_3Name: null
+	,world_row_4_column_3Description: null
+	,world_row_4_column_3Size: null
+	,world_row_4_column_3Load: function(done,failure) {
+		kha_Assets.loadImage("world_row_4_column_3",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "world_row_4_column_3Load"});
+	}
+	,world_row_4_column_3Unload: function() {
+		this.world_row_4_column_3.unload();
+		this.world_row_4_column_3 = null;
 	}
 	,names: null
 	,__class__: kha__$Assets_ImageList
@@ -34894,8 +35207,8 @@ kha__$Assets_SoundList.prototype = {
 };
 var kha__$Assets_BlobList = function() {
 	this.names = ["index_html","test1_tmx"];
-	this.test1_tmxSize = 7736;
-	this.test1_tmxDescription = { name : "test1_tmx", file_sizes : [7736], files : ["test1.tmx"], type : "blob"};
+	this.test1_tmxSize = 7639;
+	this.test1_tmxDescription = { name : "test1_tmx", file_sizes : [7639], files : ["test1.tmx"], type : "blob"};
 	this.test1_tmxName = "test1_tmx";
 	this.test1_tmx = null;
 	this.index_htmlSize = 559;
@@ -64811,6 +65124,8 @@ echo_util_AABB.pool = new echo_util_GenericPool_$echo_$util_$AABB(echo_util_AABB
 echo_util_QuadTree.pool = new echo_util_GenericPool_$echo_$util_$QuadTree(echo_util_QuadTree);
 echo_util_SAT.norm = new echo_math_Vector2Default(0,0);
 echo_util_SAT.closest = new echo_math_Vector2Default(0,0);
+game_actors_Player.X_VEL_TARGET = 960;
+game_actors_Player.VEL_CHANGE_SPEED = 960;
 game_actors_Player.JUMP_VEL = 900;
 game_actors_Player.SUPER_JUMP_VEL = 1500;
 game_actors_Player.JUMP_BUFFER_TIME = 0.1;
@@ -64819,7 +65134,8 @@ game_actors_Player.AIRTIME_BUFFER = 0.1;
 game_actors_Player.JUMP_HOLD_TIME = 0.2;
 game_actors_Player.HANG_TIME = 0.1;
 game_actors_Player.ROCKET_TIME = 0.25;
-game_actors_Player.GROUND_TIME = 0.1;
+game_actors_Player.GROUND_TIME = 0.25;
+var game_scenes_RoomScene_roomRects = [{ x : -64, y : -64, width : 64, height : 848},{ x : -64, y : -64, width : 1863, height : 64},{ x : -64, y : 720, width : 1863, height : 64},{ x : 1735, y : -64, width : 64, height : 848}];
 game_util_Debug.on = false;
 var game_util_InputRes_jumpKeys = [38,32,90,87];
 var game_util_InputRes_selectKeys = [32,90];

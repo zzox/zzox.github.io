@@ -1,15 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="355" height="426" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="139">
- <imagelayer id="3" name="our-room" offsetx="5.11591e-13" offsety="15.1515">
-  <image source="../images/backgrounds/hotel-room.png" width="1735" height="720"/>
- </imagelayer>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="355" height="426" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="142">
  <imagelayer id="5" name="bg">
   <image source="../images/backgrounds/world-top.png" width="5679" height="6814"/>
  </imagelayer>
  <objectgroup id="2" name="tris">
-  <object id="26" x="3587.88" y="5718.18">
-   <polygon points="0,0 824.242,-178.788 824.242,-24.2424"/>
-  </object>
   <object id="41" x="2902.5" y="6016">
    <polygon points="0,0 7.15625,-187.5 229,-1.71233"/>
   </object>
@@ -60,6 +54,12 @@
   </object>
   <object id="138" x="95.3333" y="3922.67">
    <polygon points="0,0 -93.3333,-32 127.333,5.33333"/>
+  </object>
+  <object id="140" x="4036" y="5661.33">
+   <polygon points="0,0 -452,54.6667 378.667,-124"/>
+  </object>
+  <object id="141" x="1826" y="1642">
+   <polygon points="0,0 66,0 32,28"/>
   </object>
  </objectgroup>
  <objectgroup id="6" name="rects">
