@@ -124,7 +124,7 @@ $hxClasses["Main"] = Main;
 Main.__name__ = "Main";
 Main.main = function() {
 	Main.setFullWindowCanvas();
-	new core_Game(new core_IntVec2(1280,720),new game_scenes_RoomScene(),core_ScaleMode.Full,"offseason",new core_IntVec2(1280,720),function(e) {
+	new core_Game(new core_IntVec2(1280,720),new game_scenes_WorldScene(),core_ScaleMode.Full,"offseason",new core_IntVec2(1280,720),function(e) {
 		core_Logs_sendErrorLogs(e);
 		throw haxe_Exception.thrown(e);
 	},function(item) {
