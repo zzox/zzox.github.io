@@ -2014,6 +2014,49 @@ core_ScalerExp.getPixelPerfectScale = function(source,destination) {
 	}
 	return scale;
 };
+var core_Sound = function() { };
+$hxClasses["core.Sound"] = core_Sound;
+core_Sound.__name__ = true;
+core_Sound.play = function(sound,volume,loop) {
+	if(loop == null) {
+		loop = false;
+	}
+	if(volume == null) {
+		volume = 1.0;
+	}
+	var channel = kha_audio2_Audio1.play(sound,loop);
+	if(channel != null) {
+		channel.set_volume(volume);
+		return channel;
+	}
+	return null;
+};
+core_Sound.load = function(sound,volume,loop) {
+	if(loop == null) {
+		loop = false;
+	}
+	if(volume == null) {
+		volume = 1.0;
+	}
+	var channel = kha_audio2_Audio1.play(sound,loop);
+	channel.set_volume(volume);
+	channel.pause();
+	return channel;
+};
+core_Sound.stream = function(sound,volume,loop) {
+	if(loop == null) {
+		loop = false;
+	}
+	if(volume == null) {
+		volume = 1.0;
+	}
+	var channel = sound.uncompressedData == null ? kha_audio2_Audio1.stream(sound,loop) : kha_audio2_Audio1.play(sound,loop);
+	if(channel == null) {
+		throw haxe_Exception.thrown("Cannot stream");
+	}
+	channel.set_volume(volume);
+	return channel;
+};
 var core_SpriteType = $hxEnums["core.SpriteType"] = { __ename__:true,__constructs__:null
 	,None: {_hx_name:"None",_hx_index:0,__enum__:"core.SpriteType",toString:$estr}
 	,Image: {_hx_name:"Image",_hx_index:1,__enum__:"core.SpriteType",toString:$estr}
@@ -2531,9 +2574,32 @@ function core_Util_shuffle(items) {
 function core_Util_randomInt(maxInt) {
 	return Math.floor(Math.random() * maxInt);
 }
+var game_scenes_ClickFocusScene = function() {
+	core_Scene.call(this);
+};
+$hxClasses["game.scenes.ClickFocusScene"] = game_scenes_ClickFocusScene;
+game_scenes_ClickFocusScene.__name__ = true;
+game_scenes_ClickFocusScene.__super__ = core_Scene;
+game_scenes_ClickFocusScene.prototype = $extend(core_Scene.prototype,{
+	create: function() {
+		var clickText = game_util_UiText_getText(0,64,"Press Space, Click, or Tap");
+		clickText.setPosition(Math.round((240 - clickText.textWidth) / 2),clickText.y);
+		this.addSprite(clickText);
+	}
+	,update: function(delta) {
+		if(this.game.mouse.justPressed(0) || this.game.surface.justPressed() || this.game.keys.justPressed(32)) {
+			this.game.switchScene(new game_scenes_HbdScene());
+		}
+	}
+	,__class__: game_scenes_ClickFocusScene
+});
+var game_scenes_Hi = function() { };
+$hxClasses["game.scenes.Hi"] = game_scenes_Hi;
+game_scenes_Hi.__name__ = true;
 var game_scenes_GameScene = function() {
 	this.jumpBuffer = 0.1;
 	this.obstacles = [];
+	this.canRestart = false;
 	this.started = false;
 	this.gameIsOver = false;
 	core_Scene.call(this);
@@ -2549,6 +2615,7 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 	,screen1: null
 	,screen2: null
 	,ground: null
+	,canRestart: null
 	,obstacles: null
 	,jumpBuffer: null
 	,scoreText: null
@@ -2563,11 +2630,10 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 		this.addSprite(this.screen1 = new game_scenes_Bg());
 		this.addSprite(this.screen2 = new game_scenes_Bg());
 		this.screen2.x = 480;
+		this.screen2.tileIndex = 1;
 		this.addSprite(this.edie = new game_scenes_Edie());
 		this.addSprite(this.stefano = new game_scenes_Stefano());
-		var obstacle = new game_scenes_Obstacle(240,87);
-		this.obstacles.push(obstacle);
-		this.addSprite(obstacle);
+		this.makeObstacle(360,"radio");
 		this.game.physics.gravity.set(0,480);
 		this.camera.startFollow(this.edie);
 		this.camera.setBounds(0,0,1000000,135);
@@ -2575,6 +2641,9 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 		this.scoreText.color = -16777216;
 		this.scoreText.scrollFactor.set(0,0);
 		this.addSprite(this.scoreText);
+		var ts = new game_scenes_TranSprite();
+		this.addSprite(ts);
+		ts.tweenTo(-320);
 	}
 	,update: function(delta) {
 		core_Scene.prototype.update.call(this,delta);
@@ -2592,6 +2661,10 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 				this.edie.run();
 				this.stefano.run();
 			}
+			if(this.canRestart) {
+				this.game.switchScene(new game_scenes_GameScene());
+				return;
+			}
 		}
 		if(!this.gameIsOver) {
 			if(this.game.mouse.justReleased(0) || this.game.surface.justReleased() || this.game.keys.justReleased(32)) {
@@ -2600,29 +2673,86 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 			if(this.started && this.edie.body.touching.down && this.jumpBuffer < 0.1) {
 				this.edie.jump();
 			}
-			if(this.camera.scroll.x > this.screen1.x + 480) {
-				this.screen1.x += 960;
-			}
+		}
+		if(this.camera.scroll.x > this.screen1.x + 480) {
+			this.screen1.x += 960;
+			this.screen1.tileIndex = core_Util_randomInt(3);
+			this.makeObstacle(this.screen1.x + 160 | 0,"radio");
+			this.makeObstacle(this.screen1.x + 320 | 0,"julius");
 		}
 		if(this.camera.scroll.x > this.screen2.x + 480) {
 			this.screen2.x += 960;
+			this.screen2.tileIndex = core_Util_randomInt(3);
 		}
-		if(this.game.physics.overlap(this.edie.body,this.obstacles[0].body)) {
-			this.gameOver();
+		var _g = 0;
+		var _g1 = this.obstacles;
+		while(_g < _g1.length) {
+			var o = _g1[_g];
+			++_g;
+			if(this.game.physics.overlap(this.edie.body,o.body)) {
+				if(!this.gameIsOver) {
+					this.gameOver();
+					o.interact();
+				}
+			}
+		}
+		var _g = 0;
+		var _g1 = this.obstacles;
+		while(_g < _g1.length) {
+			var o = _g1[_g];
+			++_g;
+			if(o.x < this.camera.scroll.x - 32) {
+				HxOverrides.remove(this.obstacles,o);
+				o.destroy();
+			}
 		}
 		if(!this.gameIsOver) {
-			this.scoreText.setBitmapText(this.edie.body.position.x - 16 + "");
-			this.scoreText.setPosition(236 - this.scoreText.textWidth,0);
+			this.scoreText.setBitmapText(Math.floor((this.edie.body.position.x - 16) / 10) + "");
+			this.scoreText.setPosition(238 - this.scoreText.textWidth,2);
 		}
 	}
+	,makeObstacle: function(xPos,name) {
+		var obstacle = new game_scenes_Obstacle(xPos,119,name);
+		obstacle.setPosition(obstacle.x,89);
+		this.obstacles.push(obstacle);
+		this.addSprite(obstacle);
+	}
 	,gameOver: function() {
+		var _gthis = this;
 		this.gameIsOver = true;
 		this.edie.runBack();
 		this.camera.stopFollow();
+		var score = Math.floor((this.edie.body.position.x - 16) / 10);
+		this.timers.addTimer(new core_Timer(1.0,function() {
+			core_Sound.play(kha_Assets.sounds.meow_2,0.5);
+		}));
+		this.timers.addTimer(new core_Timer(1.5,function() {
+			var ts = new game_scenes_TranSprite();
+			ts.x = 240;
+			_gthis.addSprite(ts);
+			ts.tweenTo(-40);
+		}));
+		this.timers.addTimer(new core_Timer(2.0,function() {
+			_gthis.edie.stop();
+			_gthis.addSprite(game_util_UiText_getText(0,24,"Game Over",true));
+			core_Sound.play(kha_Assets.sounds.lose,0.1);
+		}));
+		this.timers.addTimer(new core_Timer(3.25,function() {
+			_gthis.addSprite(game_util_UiText_getText(0,48,"Final Score: " + score,true));
+		}));
+		this.timers.addTimer(new core_Timer(3.5,function() {
+			if(score > game_scenes_Hi.score) {
+				game_scenes_Hi.score = score;
+				_gthis.addSprite(game_util_UiText_getText(0,84,"Hi Score!",true));
+				core_Sound.play(kha_Assets.sounds.hi_score);
+			}
+			_gthis.canRestart = true;
+		}));
 	}
 	,__class__: game_scenes_GameScene
 });
 var game_scenes_Edie = function() {
+	this.prevDown = false;
 	this.hasStarted = false;
 	this.jumpTime = 0.0;
 	this.isJumping = false;
@@ -2630,8 +2760,8 @@ var game_scenes_Edie = function() {
 	this.physicsEnabled = true;
 	this.animation.add("stand",[0]);
 	this.animation.add("run",[3,1,1,2],0.08);
-	this.animation.add("jump-up",[4,5],0.08);
-	this.animation.add("jump-down",[6,7],0.08);
+	this.animation.add("jump-up",[4,5],0.15);
+	this.animation.add("jump-down",[6,7],0.15);
 	this.body.size.set(14,11);
 	this.offset.set(9,16);
 	this.body.maxVelocity.set(120,240);
@@ -2643,6 +2773,7 @@ game_scenes_Edie.prototype = $extend(core_Sprite.prototype,{
 	isJumping: null
 	,jumpTime: null
 	,hasStarted: null
+	,prevDown: null
 	,update: function(delta) {
 		if(this.isJumping) {
 			this.body.velocity.y = -150;
@@ -2651,27 +2782,38 @@ game_scenes_Edie.prototype = $extend(core_Sprite.prototype,{
 		if(this.jumpTime < 0.0) {
 			this.isJumping = false;
 		}
+		var touchingDown = this.body.touching.down;
 		if(this.hasStarted) {
-			if(this.body.touching.down) {
+			if(touchingDown) {
 				this.animation.play("run");
 			} else if(this.body.velocity.y < 0) {
 				this.animation.play("jump-up");
 			} else {
 				this.animation.play("jump-down");
 			}
+			if(this.prevDown && !touchingDown) {
+				core_Sound.play(kha_Assets.sounds.jump_up,0.25);
+			} else if(!this.prevDown && touchingDown) {
+				core_Sound.play(kha_Assets.sounds.jump_land,0.25);
+				if(Math.random() < 0.05) {
+					core_Sound.play(kha_Assets.sounds.cat_purr,0.25);
+				}
+			}
+			this.prevDown = touchingDown;
 		}
 		core_Sprite.prototype.update.call(this,delta);
 	}
 	,jump: function() {
-		haxe_Log.trace("jump",{ fileName : "game/scenes/GameScene.hx", lineNumber : 162, className : "game.scenes.Edie", methodName : "jump"});
+		haxe_Log.trace("jump",{ fileName : "game/scenes/GameScene.hx", lineNumber : 250, className : "game.scenes.Edie", methodName : "jump"});
 		this.isJumping = true;
 		this.jumpTime = 0.25;
 	}
 	,stopJump: function() {
-		haxe_Log.trace("stop jump",{ fileName : "game/scenes/GameScene.hx", lineNumber : 168, className : "game.scenes.Edie", methodName : "stopJump"});
+		haxe_Log.trace("stop jump",{ fileName : "game/scenes/GameScene.hx", lineNumber : 256, className : "game.scenes.Edie", methodName : "stopJump"});
 		this.isJumping = false;
 	}
 	,run: function() {
+		core_Sound.play(kha_Assets.sounds.meow_1,0.5);
 		this.hasStarted = true;
 		this.body.acceleration.x = 900;
 		this.animation.play("run");
@@ -2682,6 +2824,35 @@ game_scenes_Edie.prototype = $extend(core_Sprite.prototype,{
 		this.flipX = true;
 	}
 	,__class__: game_scenes_Edie
+});
+var game_scenes_TranSprite = function() {
+	this.tween = null;
+	core_Sprite.call(this,new core_Vec2(-40,0),kha_Assets.images.transition);
+	this.scrollFactor.set(0,0);
+};
+$hxClasses["game.scenes.TranSprite"] = game_scenes_TranSprite;
+game_scenes_TranSprite.__name__ = true;
+game_scenes_TranSprite.__super__ = core_Sprite;
+game_scenes_TranSprite.prototype = $extend(core_Sprite.prototype,{
+	tween: null
+	,update: function(delta) {
+		if(this.tween != null) {
+			this.x = this.tween.value;
+		}
+		core_Sprite.prototype.update.call(this,delta);
+	}
+	,tweenTo: function(to) {
+		var _gthis = this;
+		if(this.tween != null) {
+			this.tween.destroy();
+		}
+		this.tween = new core_Tween(this.x,to,0.5,function() {
+			_gthis.x = to;
+			_gthis.tween = null;
+		});
+		this.scene.tweens.addTween(this.tween);
+	}
+	,__class__: game_scenes_TranSprite
 });
 var game_scenes_Bg = function() {
 	core_Sprite.call(this,new core_Vec2(0,0),kha_Assets.images.bg,new core_IntVec2(480,119));
@@ -2712,30 +2883,151 @@ game_scenes_Stefano.prototype = $extend(core_Sprite.prototype,{
 	}
 	,__class__: game_scenes_Stefano
 });
-var game_scenes_Obstacle = function(x,y) {
+var game_scenes_Obstacle = function(x,y,name) {
+	this.interacted = false;
+	this.barkSounds = [kha_Assets.sounds.bark_1,kha_Assets.sounds.bark_2,kha_Assets.sounds.bark_3];
 	core_Sprite.call(this,new core_Vec2(x,y),kha_Assets.images.animal,new core_IntVec2(32,32));
 	this.animation.add("radio",[12]);
-	this.offset.set(11,3);
-	this.body.size.set(10,29);
+	this.animation.add("radio-bark",[13,12],0.25,false);
+	this.animation.add("julius",[14]);
+	this.animation.add("julius-bark",[15,14],0.25,false);
+	this.offset.set(11,12);
+	this.body.size.set(10,20);
 	this.body.gravityFactor.set(0,0);
 	this.physicsEnabled = true;
-	this.animation.play("radio");
+	this.animation.play(name);
+	this.name = name;
 };
 $hxClasses["game.scenes.Obstacle"] = game_scenes_Obstacle;
 game_scenes_Obstacle.__name__ = true;
 game_scenes_Obstacle.__super__ = core_Sprite;
 game_scenes_Obstacle.prototype = $extend(core_Sprite.prototype,{
-	__class__: game_scenes_Obstacle
+	barkSounds: null
+	,name: null
+	,interacted: null
+	,interact: function() {
+		core_Sound.play(this.barkSounds[Math.floor(Math.random() * 3)]);
+		this.interacted = true;
+		this.animation.play("" + this.name + "-bark");
+	}
+	,__class__: game_scenes_Obstacle
+});
+var game_scenes_HbdScene = function() {
+	this.canGo = false;
+	this.starringEnded = false;
+	this.texts = [];
+	this.colors = [-5492174,-9026934,-9781712,-2655302,-10249217];
+	core_Scene.call(this);
+};
+$hxClasses["game.scenes.HbdScene"] = game_scenes_HbdScene;
+game_scenes_HbdScene.__name__ = true;
+game_scenes_HbdScene.__super__ = core_Scene;
+game_scenes_HbdScene.prototype = $extend(core_Scene.prototype,{
+	colors: null
+	,texts: null
+	,starringEnded: null
+	,canGo: null
+	,create: function() {
+		var _gthis = this;
+		var _g = 0;
+		var _g1 = this.colors.length * 2;
+		while(_g < _g1) {
+			var i = [_g++];
+			this.timers.addTimer(new core_Timer(0.125 * i[0] + 0.5,(function(i) {
+				return function() {
+					var colorText = game_util_UiText_getText(24,24 + i[0] * 8,"HBD SARAH!!!");
+					colorText.color = _gthis.colors[i[0] % _gthis.colors.length];
+					_gthis.texts.push(colorText);
+					_gthis.addSprite(colorText);
+				};
+			})(i)));
+		}
+		this.timers.addTimer(new core_Timer(3.5,function() {
+			var t = game_util_UiText_getText(120,64,"I made you a game");
+			_gthis.texts.push(t);
+			_gthis.addSprite(t);
+			_gthis.canGo = true;
+		}));
+	}
+	,update: function(delta) {
+		if((this.game.mouse.justPressed(0) || this.game.surface.justPressed() || this.game.keys.justPressed(32)) && this.canGo) {
+			this.nextStage();
+		}
+		core_Scene.prototype.update.call(this,delta);
+	}
+	,nextStage: function() {
+		var _gthis = this;
+		if(this.starringEnded) {
+			this.game.switchScene(new game_scenes_GameScene());
+		} else {
+			var _g = 0;
+			var _g1 = this.texts;
+			while(_g < _g1.length) {
+				var t = _g1[_g];
+				++_g;
+				t.destroy();
+			}
+			this.timers.addTimer(new core_Timer(0.5,function() {
+				_gthis.addSprite(game_util_UiText_getText(0,16,"EDIE CHASE",true));
+			}));
+			this.timers.addTimer(new core_Timer(2.0,function() {
+				_gthis.addSprite(game_util_UiText_getText(0,32,"Starring...",true));
+			}));
+			this.timers.addTimer(new core_Timer(3.5,function() {
+				_gthis.addSprite(game_util_UiText_getText(16,52,"Edie"));
+				_gthis.addSprite(new game_scenes_AnimalSprite(48,40,0));
+			}));
+			this.timers.addTimer(new core_Timer(4.25,function() {
+				_gthis.addSprite(game_util_UiText_getText(116,108,"Julius"));
+				_gthis.addSprite(new game_scenes_AnimalSprite(160,96,14));
+			}));
+			this.timers.addTimer(new core_Timer(5.0,function() {
+				_gthis.addSprite(game_util_UiText_getText(16,92,"Radio"));
+				_gthis.addSprite(new game_scenes_AnimalSprite(48,80,12));
+			}));
+			this.timers.addTimer(new core_Timer(5.75,function() {
+				_gthis.addSprite(game_util_UiText_getText(110,68,"Stefano"));
+				_gthis.addSprite(new game_scenes_AnimalSprite(160,56,8));
+				_gthis.starringEnded = true;
+				_gthis.canGo = true;
+			}));
+		}
+	}
+	,__class__: game_scenes_HbdScene
+});
+var game_scenes_AnimalSprite = function(x,y,index) {
+	core_Sprite.call(this,new core_Vec2(x,y),kha_Assets.images.animal,new core_IntVec2(32,32));
+	this.tileIndex = index;
+};
+$hxClasses["game.scenes.AnimalSprite"] = game_scenes_AnimalSprite;
+game_scenes_AnimalSprite.__name__ = true;
+game_scenes_AnimalSprite.__super__ = core_Sprite;
+game_scenes_AnimalSprite.prototype = $extend(core_Sprite.prototype,{
+	render: function(g2,cam) {
+		var prevIndex = this.tileIndex;
+		this.tileIndex = 16;
+		core_Sprite.prototype.render.call(this,g2,cam);
+		this.tileIndex = prevIndex;
+		core_Sprite.prototype.render.call(this,g2,cam);
+	}
+	,__class__: game_scenes_AnimalSprite
 });
 function game_util_UiText_getFont() {
 	return new core_ConstructBitmapFont(new core_IntVec2(16,16),"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!\"'+-=*%_() ",[[3," "],[8,"m"],[7,""],[6,"ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghjknopqstuvwxyz0123456789?+-=*%_"],[5,"r"],[4,"Ii\"()"],[3,"l.,;:!'"]],-4);
 }
-function game_util_UiText_getText(x,y,text) {
+function game_util_UiText_getText(x,y,text,centered) {
+	if(centered == null) {
+		centered = false;
+	}
 	if(text == null) {
 		text = "";
 	}
 	var sprite = new core_Sprite(new core_Vec2(x,y),kha_Assets.images.somepx_04);
 	sprite.makeBitmapText(text,game_util_UiText_getFont());
+	sprite.scrollFactor.set(0,0);
+	if(centered) {
+		sprite.setPosition(Math.round((240 - sprite.textWidth) / 2),sprite.y);
+	}
 	return sprite;
 }
 var haxe_StackItem = $hxEnums["haxe.StackItem"] = { __ename__:true,__constructs__:null
@@ -4503,7 +4795,11 @@ kha__$Assets_AssetData._get = function(this1,key) {
 	return Reflect.getProperty(this1,key);
 };
 var kha__$Assets_ImageList = function() {
-	this.names = ["animal","bg","floor","made_with_kha","somepx_04"];
+	this.names = ["animal","bg","floor","made_with_kha","somepx_04","transition"];
+	this.transitionSize = 719;
+	this.transitionDescription = { name : "transition", original_height : 135, file_sizes : [719], original_width : 320, files : ["transition.png"], type : "image"};
+	this.transitionName = "transition";
+	this.transition = null;
 	this.somepx_04Size = 1208;
 	this.somepx_04Description = { name : "somepx_04", original_height : 96, file_sizes : [1208], original_width : 208, files : ["somepx-04.png"], type : "image"};
 	this.somepx_04Name = "somepx_04";
@@ -4516,12 +4812,12 @@ var kha__$Assets_ImageList = function() {
 	this.floorDescription = { name : "floor", original_height : 8, file_sizes : [133], original_width : 240, files : ["floor.png"], type : "image"};
 	this.floorName = "floor";
 	this.floor = null;
-	this.bgSize = 951;
-	this.bgDescription = { name : "bg", original_height : 119, file_sizes : [951], original_width : 480, files : ["bg.png"], type : "image"};
+	this.bgSize = 2245;
+	this.bgDescription = { name : "bg", original_height : 119, file_sizes : [2245], original_width : 1440, files : ["bg.png"], type : "image"};
 	this.bgName = "bg";
 	this.bg = null;
-	this.animalSize = 2826;
-	this.animalDescription = { name : "animal", original_height : 32, file_sizes : [2826], original_width : 512, files : ["animal.png"], type : "image"};
+	this.animalSize = 3697;
+	this.animalDescription = { name : "animal", original_height : 32, file_sizes : [3697], original_width : 608, files : ["animal.png"], type : "image"};
 	this.animalName = "animal";
 	this.animal = null;
 };
@@ -4596,17 +4892,200 @@ kha__$Assets_ImageList.prototype = {
 		this.somepx_04.unload();
 		this.somepx_04 = null;
 	}
+	,transition: null
+	,transitionName: null
+	,transitionDescription: null
+	,transitionSize: null
+	,transitionLoad: function(done,failure) {
+		kha_Assets.loadImage("transition",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "transitionLoad"});
+	}
+	,transitionUnload: function() {
+		this.transition.unload();
+		this.transition = null;
+	}
 	,names: null
 	,__class__: kha__$Assets_ImageList
 };
 var kha__$Assets_SoundList = function() {
-	this.names = [];
+	this.names = ["bark_1","bark_2","bark_3","cat_purr","hi_score","jump_land","jump_up","lose","meow_1","meow_2"];
+	this.meow_2Size = 18578;
+	this.meow_2Description = { name : "meow_2", file_sizes : [18578,20479], files : ["meow-2.ogg","meow-2.mp3"], type : "sound"};
+	this.meow_2Name = "meow_2";
+	this.meow_2 = null;
+	this.meow_1Size = 18900;
+	this.meow_1Description = { name : "meow_1", file_sizes : [18900,20479], files : ["meow-1.ogg","meow-1.mp3"], type : "sound"};
+	this.meow_1Name = "meow_1";
+	this.meow_1 = null;
+	this.loseSize = 24789;
+	this.loseDescription = { name : "lose", file_sizes : [24789,33017], files : ["lose.ogg","lose.mp3"], type : "sound"};
+	this.loseName = "lose";
+	this.lose = null;
+	this.jump_upSize = 9266;
+	this.jump_upDescription = { name : "jump_up", file_sizes : [9266,9194], files : ["jump-up.ogg","jump-up.mp3"], type : "sound"};
+	this.jump_upName = "jump_up";
+	this.jump_up = null;
+	this.jump_landSize = 9569;
+	this.jump_landDescription = { name : "jump_land", file_sizes : [9569,9194], files : ["jump-land.ogg","jump-land.mp3"], type : "sound"};
+	this.jump_landName = "jump_land";
+	this.jump_land = null;
+	this.hi_scoreSize = 17693;
+	this.hi_scoreDescription = { name : "hi_score", file_sizes : [17693,17135], files : ["hi-score.ogg","hi-score.mp3"], type : "sound"};
+	this.hi_scoreName = "hi_score";
+	this.hi_score = null;
+	this.cat_purrSize = 43993;
+	this.cat_purrDescription = { name : "cat_purr", file_sizes : [43993,53497], files : ["cat-purr.ogg","cat-purr.mp3"], type : "sound"};
+	this.cat_purrName = "cat_purr";
+	this.cat_purr = null;
+	this.bark_3Size = 9221;
+	this.bark_3Description = { name : "bark_3", file_sizes : [9221,8358], files : ["bark-3.ogg","bark-3.mp3"], type : "sound"};
+	this.bark_3Name = "bark_3";
+	this.bark_3 = null;
+	this.bark_2Size = 8993;
+	this.bark_2Description = { name : "bark_2", file_sizes : [8993,8358], files : ["bark-2.ogg","bark-2.mp3"], type : "sound"};
+	this.bark_2Name = "bark_2";
+	this.bark_2 = null;
+	this.bark_1Size = 8938;
+	this.bark_1Description = { name : "bark_1", file_sizes : [8938,8358], files : ["bark-1.ogg","bark-1.mp3"], type : "sound"};
+	this.bark_1Name = "bark_1";
+	this.bark_1 = null;
 };
 $hxClasses["kha._Assets.SoundList"] = kha__$Assets_SoundList;
 kha__$Assets_SoundList.__name__ = true;
 kha__$Assets_SoundList.prototype = {
 	get: function(name) {
 		return Reflect.field(this,name);
+	}
+	,bark_1: null
+	,bark_1Name: null
+	,bark_1Description: null
+	,bark_1Size: null
+	,bark_1Load: function(done,failure) {
+		kha_Assets.loadSound("bark_1",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "bark_1Load"});
+	}
+	,bark_1Unload: function() {
+		this.bark_1.unload();
+		this.bark_1 = null;
+	}
+	,bark_2: null
+	,bark_2Name: null
+	,bark_2Description: null
+	,bark_2Size: null
+	,bark_2Load: function(done,failure) {
+		kha_Assets.loadSound("bark_2",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "bark_2Load"});
+	}
+	,bark_2Unload: function() {
+		this.bark_2.unload();
+		this.bark_2 = null;
+	}
+	,bark_3: null
+	,bark_3Name: null
+	,bark_3Description: null
+	,bark_3Size: null
+	,bark_3Load: function(done,failure) {
+		kha_Assets.loadSound("bark_3",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "bark_3Load"});
+	}
+	,bark_3Unload: function() {
+		this.bark_3.unload();
+		this.bark_3 = null;
+	}
+	,cat_purr: null
+	,cat_purrName: null
+	,cat_purrDescription: null
+	,cat_purrSize: null
+	,cat_purrLoad: function(done,failure) {
+		kha_Assets.loadSound("cat_purr",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "cat_purrLoad"});
+	}
+	,cat_purrUnload: function() {
+		this.cat_purr.unload();
+		this.cat_purr = null;
+	}
+	,hi_score: null
+	,hi_scoreName: null
+	,hi_scoreDescription: null
+	,hi_scoreSize: null
+	,hi_scoreLoad: function(done,failure) {
+		kha_Assets.loadSound("hi_score",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "hi_scoreLoad"});
+	}
+	,hi_scoreUnload: function() {
+		this.hi_score.unload();
+		this.hi_score = null;
+	}
+	,jump_land: null
+	,jump_landName: null
+	,jump_landDescription: null
+	,jump_landSize: null
+	,jump_landLoad: function(done,failure) {
+		kha_Assets.loadSound("jump_land",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "jump_landLoad"});
+	}
+	,jump_landUnload: function() {
+		this.jump_land.unload();
+		this.jump_land = null;
+	}
+	,jump_up: null
+	,jump_upName: null
+	,jump_upDescription: null
+	,jump_upSize: null
+	,jump_upLoad: function(done,failure) {
+		kha_Assets.loadSound("jump_up",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "jump_upLoad"});
+	}
+	,jump_upUnload: function() {
+		this.jump_up.unload();
+		this.jump_up = null;
+	}
+	,lose: null
+	,loseName: null
+	,loseDescription: null
+	,loseSize: null
+	,loseLoad: function(done,failure) {
+		kha_Assets.loadSound("lose",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "loseLoad"});
+	}
+	,loseUnload: function() {
+		this.lose.unload();
+		this.lose = null;
+	}
+	,meow_1: null
+	,meow_1Name: null
+	,meow_1Description: null
+	,meow_1Size: null
+	,meow_1Load: function(done,failure) {
+		kha_Assets.loadSound("meow_1",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "meow_1Load"});
+	}
+	,meow_1Unload: function() {
+		this.meow_1.unload();
+		this.meow_1 = null;
+	}
+	,meow_2: null
+	,meow_2Name: null
+	,meow_2Description: null
+	,meow_2Size: null
+	,meow_2Load: function(done,failure) {
+		kha_Assets.loadSound("meow_2",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "meow_2Load"});
+	}
+	,meow_2Unload: function() {
+		this.meow_2.unload();
+		this.meow_2 = null;
 	}
 	,names: null
 	,__class__: kha__$Assets_SoundList
@@ -34604,6 +35083,7 @@ core_AsciiFont.charArray = core_BitmapFont_asciiChars.split("");
 core_Camera.MIN_LERP_DISTANCE = 0.06;
 core_Game.UPDATE_TIME = 0.0166666666666666664;
 var core_Logs_id = (Math.random() + "").split(".")[1];
+game_scenes_Hi.score = 0;
 haxe_Unserializer.DEFAULT_RESOLVER = new haxe__$Unserializer_DefaultResolver();
 haxe_Unserializer.BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789%:";
 haxe_crypto_Base64.CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
