@@ -123,7 +123,7 @@ $hxClasses["Main"] = Main;
 Main.__name__ = true;
 Main.main = function() {
 	Main.setFullWindowCanvas();
-	new core_Game(new core_IntVec2(1300,750),new game_scenes_GameScene(),core_ScaleMode.PixelPerfect,"hbd sarah",new core_IntVec2(240,135),function(e) {
+	new core_Game(new core_IntVec2(1300,750),new game_scenes_ClickFocusScene(),core_ScaleMode.PixelPerfect,"hbd sarah",new core_IntVec2(240,135),function(e) {
 		core_Logs_sendErrorLogs(e);
 		throw haxe_Exception.thrown(e);
 	},function(item) {
@@ -2597,8 +2597,11 @@ var game_scenes_Hi = function() { };
 $hxClasses["game.scenes.Hi"] = game_scenes_Hi;
 game_scenes_Hi.__name__ = true;
 var game_scenes_GameScene = function() {
+	this.fullscreenNum = 0;
 	this.jumpBuffer = 0.1;
+	this.hands = [];
 	this.obstacles = [];
+	this.ottomans = [];
 	this.canRestart = false;
 	this.started = false;
 	this.gameIsOver = false;
@@ -2616,8 +2619,11 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 	,screen2: null
 	,ground: null
 	,canRestart: null
+	,ottomans: null
 	,obstacles: null
+	,hands: null
 	,jumpBuffer: null
+	,fullscreenNum: null
 	,scoreText: null
 	,create: function() {
 		var floorSprite = new core_Sprite(new core_Vec2(0,119),kha_Assets.images.floor);
@@ -2633,9 +2639,10 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 		this.screen2.tileIndex = 1;
 		this.addSprite(this.edie = new game_scenes_Edie());
 		this.addSprite(this.stefano = new game_scenes_Stefano());
-		this.makeObstacle(360,"radio");
+		this.makeObstacle(480,"radio");
+		this.makeObstacle(720,"julius");
 		this.game.physics.gravity.set(0,480);
-		this.camera.startFollow(this.edie);
+		this.camera.startFollow(this.edie,new core_IntVec2(-60,0));
 		this.camera.setBounds(0,0,1000000,135);
 		this.scoreText = game_util_UiText_getText(240,0);
 		this.scoreText.color = -16777216;
@@ -2677,12 +2684,53 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 		if(this.camera.scroll.x > this.screen1.x + 480) {
 			this.screen1.x += 960;
 			this.screen1.tileIndex = core_Util_randomInt(3);
-			this.makeObstacle(this.screen1.x + 160 | 0,"radio");
-			this.makeObstacle(this.screen1.x + 320 | 0,"julius");
+			var rand = this.fullscreenNum * Math.random();
+			if(rand > 5.0) {
+				this.screen1.tileIndex = 2;
+				this.makeOttoman(this.screen1.x + 120 | 0);
+				this.makeHand(this.screen1.x + 360 | 0);
+			} else if(rand > 3.0) {
+				this.makeObstacle(this.screen1.x + 240 | 0,Math.random() < 0.5 ? "julius" : "radio");
+			} else if(rand > 1.0) {
+				this.screen1.tileIndex = 2;
+				this.makeOttoman(this.screen1.x + 240 | 0);
+			} else {
+				this.makeObstacle(this.screen1.x + 160 | 0,"radio");
+				this.makeObstacle(this.screen1.x + 320 | 0,"julius");
+			}
 		}
 		if(this.camera.scroll.x > this.screen2.x + 480) {
 			this.screen2.x += 960;
 			this.screen2.tileIndex = core_Util_randomInt(3);
+			var rand = Math.random();
+			if(rand > 0.66) {
+				this.screen2.tileIndex = 2;
+				this.makeOttoman(this.screen2.x + 120 | 0);
+				this.makeHand(this.screen2.x + 360 | 0);
+			} else if(rand > 0.33) {
+				this.makeObstacle(this.screen2.x + 240 | 0,Math.random() < 0.5 ? "julius" : "radio");
+			} else {
+				this.makeObstacle(this.screen2.x + 160 | 0,"radio");
+				this.makeObstacle(this.screen2.x + 320 | 0,"julius");
+			}
+			this.fullscreenNum++;
+			if(this.fullscreenNum % 6 == 0) {
+				core_Sound.play(kha_Assets.sounds.cat_purr,0.25);
+				this.edie.body.maxVelocity.x += 60;
+				this.edie.body.acceleration.x = 30;
+			}
+		}
+		var _g = 0;
+		var _g1 = this.ottomans;
+		while(_g < _g1.length) {
+			var o = _g1[_g];
+			++_g;
+			if(this.game.physics.overlap(this.edie.body,o.body)) {
+				if(!this.gameIsOver) {
+					this.gameOver(false);
+					o.interact();
+				}
+			}
 		}
 		var _g = 0;
 		var _g1 = this.obstacles;
@@ -2691,9 +2739,32 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 			++_g;
 			if(this.game.physics.overlap(this.edie.body,o.body)) {
 				if(!this.gameIsOver) {
-					this.gameOver();
+					this.gameOver(false);
 					o.interact();
 				}
+			}
+		}
+		var _g = 0;
+		var _g1 = this.hands;
+		while(_g < _g1.length) {
+			var h = _g1[_g];
+			++_g;
+			if(this.game.physics.overlap(this.edie.body,h.body)) {
+				if(!this.gameIsOver) {
+					this.gameOver(true);
+					h.interact();
+					this.edie.stop();
+				}
+			}
+		}
+		var _g = 0;
+		var _g1 = this.ottomans;
+		while(_g < _g1.length) {
+			var o = _g1[_g];
+			++_g;
+			if(o.x < this.camera.scroll.x - 64) {
+				HxOverrides.remove(this.ottomans,o);
+				o.destroy();
 			}
 		}
 		var _g = 0;
@@ -2704,6 +2775,16 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 			if(o.x < this.camera.scroll.x - 32) {
 				HxOverrides.remove(this.obstacles,o);
 				o.destroy();
+			}
+		}
+		var _g = 0;
+		var _g1 = this.hands;
+		while(_g < _g1.length) {
+			var h = _g1[_g];
+			++_g;
+			if(h.x < this.camera.scroll.x - 32) {
+				HxOverrides.remove(this.hands,h);
+				h.destroy();
 			}
 		}
 		if(!this.gameIsOver) {
@@ -2717,15 +2798,32 @@ game_scenes_GameScene.prototype = $extend(core_Scene.prototype,{
 		this.obstacles.push(obstacle);
 		this.addSprite(obstacle);
 	}
-	,gameOver: function() {
+	,makeHand: function(xPos) {
+		var hand = new game_scenes_Hand(xPos);
+		this.hands.push(hand);
+		this.addSprite(hand);
+	}
+	,makeOttoman: function(xPos) {
+		var ottoman = new game_scenes_Ottoman(xPos);
+		this.ottomans.push(ottoman);
+		this.addSprite(ottoman);
+	}
+	,gameOver: function(soundNow) {
 		var _gthis = this;
 		this.gameIsOver = true;
 		this.edie.runBack();
 		this.camera.stopFollow();
 		var score = Math.floor((this.edie.body.position.x - 16) / 10);
-		this.timers.addTimer(new core_Timer(1.0,function() {
+		if(soundNow) {
 			core_Sound.play(kha_Assets.sounds.meow_2,0.5);
-		}));
+			this.timers.addTimer(new core_Timer(0.5,function() {
+				core_Sound.play(kha_Assets.sounds.cat_purr,0.25);
+			}));
+		} else {
+			this.timers.addTimer(new core_Timer(1.0,function() {
+				core_Sound.play(kha_Assets.sounds.meow_2,0.5);
+			}));
+		}
 		this.timers.addTimer(new core_Timer(1.5,function() {
 			var ts = new game_scenes_TranSprite();
 			ts.x = 240;
@@ -2792,11 +2890,11 @@ game_scenes_Edie.prototype = $extend(core_Sprite.prototype,{
 				this.animation.play("jump-down");
 			}
 			if(this.prevDown && !touchingDown) {
-				core_Sound.play(kha_Assets.sounds.jump_up,0.25);
+				core_Sound.play(kha_Assets.sounds.jump_up,0.15);
 			} else if(!this.prevDown && touchingDown) {
-				core_Sound.play(kha_Assets.sounds.jump_land,0.25);
+				core_Sound.play(kha_Assets.sounds.jump_land,0.15);
 				if(Math.random() < 0.05) {
-					core_Sound.play(kha_Assets.sounds.cat_purr,0.25);
+					core_Sound.play(kha_Assets.sounds.cat_purr,0.125);
 				}
 			}
 			this.prevDown = touchingDown;
@@ -2804,12 +2902,10 @@ game_scenes_Edie.prototype = $extend(core_Sprite.prototype,{
 		core_Sprite.prototype.update.call(this,delta);
 	}
 	,jump: function() {
-		haxe_Log.trace("jump",{ fileName : "game/scenes/GameScene.hx", lineNumber : 250, className : "game.scenes.Edie", methodName : "jump"});
 		this.isJumping = true;
 		this.jumpTime = 0.25;
 	}
 	,stopJump: function() {
-		haxe_Log.trace("stop jump",{ fileName : "game/scenes/GameScene.hx", lineNumber : 256, className : "game.scenes.Edie", methodName : "stopJump"});
 		this.isJumping = false;
 	}
 	,run: function() {
@@ -2856,6 +2952,7 @@ game_scenes_TranSprite.prototype = $extend(core_Sprite.prototype,{
 });
 var game_scenes_Bg = function() {
 	core_Sprite.call(this,new core_Vec2(0,0),kha_Assets.images.bg,new core_IntVec2(480,119));
+	this.alpha = 0.8;
 };
 $hxClasses["game.scenes.Bg"] = game_scenes_Bg;
 game_scenes_Bg.__name__ = true;
@@ -2906,11 +3003,55 @@ game_scenes_Obstacle.prototype = $extend(core_Sprite.prototype,{
 	,name: null
 	,interacted: null
 	,interact: function() {
-		core_Sound.play(this.barkSounds[Math.floor(Math.random() * 3)]);
+		core_Sound.play(this.barkSounds[Math.floor(Math.random() * 3)],0.5);
 		this.interacted = true;
 		this.animation.play("" + this.name + "-bark");
 	}
 	,__class__: game_scenes_Obstacle
+});
+var game_scenes_Hand = function(x) {
+	this.interacted = false;
+	core_Sprite.call(this,new core_Vec2(x,0),kha_Assets.images.arms,new core_IntVec2(32,80));
+	this.animation.add("open",[0]);
+	this.animation.add("edie",[1]);
+	this.offset.set(8,0);
+	this.body.size.set(16,80);
+	this.body.gravityFactor.set(0,0);
+	this.physicsEnabled = true;
+	this.animation.play("open");
+};
+$hxClasses["game.scenes.Hand"] = game_scenes_Hand;
+game_scenes_Hand.__name__ = true;
+game_scenes_Hand.__super__ = core_Sprite;
+game_scenes_Hand.prototype = $extend(core_Sprite.prototype,{
+	interacted: null
+	,interact: function() {
+		this.interacted = true;
+		this.animation.play("edie");
+	}
+	,__class__: game_scenes_Hand
+});
+var game_scenes_Ottoman = function(x) {
+	this.interacted = false;
+	core_Sprite.call(this,new core_Vec2(x,104),kha_Assets.images.ottoman,new core_IntVec2(48,48));
+	this.animation.add("ottoman",[0]);
+	this.animation.add("stefano",[1,2,3],0.1,false);
+	this.offset.set(4,32);
+	this.body.size.set(40,16);
+	this.body.gravityFactor.set(0,0);
+	this.physicsEnabled = true;
+	this.animation.play("ottoman");
+};
+$hxClasses["game.scenes.Ottoman"] = game_scenes_Ottoman;
+game_scenes_Ottoman.__name__ = true;
+game_scenes_Ottoman.__super__ = core_Sprite;
+game_scenes_Ottoman.prototype = $extend(core_Sprite.prototype,{
+	interacted: null
+	,interact: function() {
+		this.interacted = true;
+		this.animation.play("stefano");
+	}
+	,__class__: game_scenes_Ottoman
 });
 var game_scenes_HbdScene = function() {
 	this.canGo = false;
@@ -4795,7 +4936,7 @@ kha__$Assets_AssetData._get = function(this1,key) {
 	return Reflect.getProperty(this1,key);
 };
 var kha__$Assets_ImageList = function() {
-	this.names = ["animal","bg","floor","made_with_kha","somepx_04","transition"];
+	this.names = ["animal","arms","bg","floor","made_with_kha","ottoman","somepx_04","transition"];
 	this.transitionSize = 719;
 	this.transitionDescription = { name : "transition", original_height : 135, file_sizes : [719], original_width : 320, files : ["transition.png"], type : "image"};
 	this.transitionName = "transition";
@@ -4804,6 +4945,10 @@ var kha__$Assets_ImageList = function() {
 	this.somepx_04Description = { name : "somepx_04", original_height : 96, file_sizes : [1208], original_width : 208, files : ["somepx-04.png"], type : "image"};
 	this.somepx_04Name = "somepx_04";
 	this.somepx_04 = null;
+	this.ottomanSize = 505;
+	this.ottomanDescription = { name : "ottoman", original_height : 48, file_sizes : [505], original_width : 192, files : ["ottoman.png"], type : "image"};
+	this.ottomanName = "ottoman";
+	this.ottoman = null;
 	this.made_with_khaSize = 785;
 	this.made_with_khaDescription = { name : "made_with_kha", original_height : 32, file_sizes : [785], original_width : 32, files : ["made-with-kha.png"], type : "image"};
 	this.made_with_khaName = "made_with_kha";
@@ -4812,10 +4957,14 @@ var kha__$Assets_ImageList = function() {
 	this.floorDescription = { name : "floor", original_height : 8, file_sizes : [133], original_width : 240, files : ["floor.png"], type : "image"};
 	this.floorName = "floor";
 	this.floor = null;
-	this.bgSize = 2245;
-	this.bgDescription = { name : "bg", original_height : 119, file_sizes : [2245], original_width : 1440, files : ["bg.png"], type : "image"};
+	this.bgSize = 2320;
+	this.bgDescription = { name : "bg", original_height : 119, file_sizes : [2320], original_width : 1440, files : ["bg.png"], type : "image"};
 	this.bgName = "bg";
 	this.bg = null;
+	this.armsSize = 1020;
+	this.armsDescription = { name : "arms", original_height : 80, file_sizes : [1020], original_width : 128, files : ["arms.png"], type : "image"};
+	this.armsName = "arms";
+	this.arms = null;
 	this.animalSize = 3697;
 	this.animalDescription = { name : "animal", original_height : 32, file_sizes : [3697], original_width : 608, files : ["animal.png"], type : "image"};
 	this.animalName = "animal";
@@ -4839,6 +4988,19 @@ kha__$Assets_ImageList.prototype = {
 	,animalUnload: function() {
 		this.animal.unload();
 		this.animal = null;
+	}
+	,arms: null
+	,armsName: null
+	,armsDescription: null
+	,armsSize: null
+	,armsLoad: function(done,failure) {
+		kha_Assets.loadImage("arms",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "armsLoad"});
+	}
+	,armsUnload: function() {
+		this.arms.unload();
+		this.arms = null;
 	}
 	,bg: null
 	,bgName: null
@@ -4878,6 +5040,19 @@ kha__$Assets_ImageList.prototype = {
 	,made_with_khaUnload: function() {
 		this.made_with_kha.unload();
 		this.made_with_kha = null;
+	}
+	,ottoman: null
+	,ottomanName: null
+	,ottomanDescription: null
+	,ottomanSize: null
+	,ottomanLoad: function(done,failure) {
+		kha_Assets.loadImage("ottoman",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "ottomanLoad"});
+	}
+	,ottomanUnload: function() {
+		this.ottoman.unload();
+		this.ottoman = null;
 	}
 	,somepx_04: null
 	,somepx_04Name: null
