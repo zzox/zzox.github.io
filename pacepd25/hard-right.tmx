@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="24">
+ <objectgroup id="7" name="start">
+  <object id="9" x="656" y="1520" width="16" height="16">
+   <properties>
+    <property name="rotation" type="int" value="270"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="6" name="finish">
+  <object id="5" x="1344" y="480" width="256" height="112"/>
+ </objectgroup>
+ <objectgroup id="9" name="collision">
+  <object id="10" x="720" y="1552">
+   <polygon points="0,0 0,-960 84.6667,-191.333"/>
+  </object>
+  <object id="11" x="608" y="1552">
+   <polygon points="0,0 112,0 52.6667,26.6667"/>
+  </object>
+  <object id="18" x="720" y="592">
+   <polygon points="0,0 704,0 336,48"/>
+  </object>
+  <object id="19" x="608" y="1552">
+   <polygon points="0,0 0,-1072 -128,-384"/>
+  </object>
+  <object id="23" x="608" y="480">
+   <polygon points="0,0 816,0 352,-80"/>
+  </object>
+ </objectgroup>
+</map>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="128" height="128" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="59">
+ <objectgroup id="7" name="start">
+  <object id="9" x="1040" y="1984" width="16" height="16">
+   <properties>
+    <property name="rotation" type="int" value="180"/>
+   </properties>
+  </object>
+  <object id="25" x="992" y="1984" width="16" height="16">
+   <properties>
+    <property name="rotation" type="int" value="0"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="6" name="finish">
+  <object id="34" x="912" y="112" width="226" height="144"/>
+ </objectgroup>
+ <objectgroup id="9" name="collision">
+  <object id="36" x="1136" y="2016">
+   <polygon points="0,0 0,-736 80,-320"/>
+  </object>
+  <object id="38" x="912" y="2016">
+   <polygon points="0,0 0,-736 -96,-304"/>
+  </object>
+  <object id="41" x="1136" y="2016">
+   <polygon points="0,0 -224,0 -112,16"/>
+  </object>
+  <object id="46" x="1024" y="1120">
+   <polygon points="0,0 -256,-256 0,-256"/>
+  </object>
+  <object id="47" x="1024" y="1120">
+   <polygon points="0,0 256,-256 0,-256"/>
+  </object>
+  <object id="49" x="1024" y="608">
+   <polygon points="0,0 -256,256 0,256"/>
+  </object>
+  <object id="50" x="1024" y="608">
+   <polygon points="0,0 256,256 0,256"/>
+  </object>
+  <object id="52" x="1136" y="192">
+   <polygon points="0,0 0,336 96,160"/>
+  </object>
+  <object id="53" x="912" y="192">
+   <polygon points="0,0 0,336 -80,144"/>
+  </object>
+  <object id="55" x="912" y="528">
+   <polygon points="0,0 -336,336 -208,112"/>
+  </object>
+  <object id="56" x="576" y="864">
+   <polygon points="0,0 336,416 64,272"/>
+  </object>
+  <object id="57" x="1488" y="864">
+   <polygon points="0,0 -352,-336 -112,-208"/>
+  </object>
+  <object id="58" x="1488" y="864">
+   <polygon points="0,0 -352,416 -96,224"/>
+  </object>
+ </objectgroup>
+</map>
