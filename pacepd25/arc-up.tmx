@@ -1,10 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="256" height="256" tilewidth="8" tileheight="8" infinite="0" nextlayerid="5" nextobjectid="25">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="256" height="256" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="32">
  <objectgroup id="2" name="start">
   <object id="1" x="176" y="1736" width="16" height="16">
    <properties>
     <property name="rotation" type="int" value="0"/>
    </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="5" name="black">
+  <object id="25" x="160" y="1720">
+   <polygon points="0,0 0,48 536,48"/>
+  </object>
+  <object id="26" x="440" y="1688">
+   <polygon points="0,0 256,80 -280,32"/>
+  </object>
+  <object id="27" x="560" y="1576">
+   <polygon points="0,0 -120,112 136,192"/>
+  </object>
+  <object id="28" x="608" y="1480">
+   <polygon points="0,0 -48,96 88,288"/>
+  </object>
+  <object id="29" x="624" y="1328">
+   <polygon points="0,0 72,440 -16,152"/>
+  </object>
+  <object id="30" x="624" y="1328">
+   <polygon points="0,0 64,-224 72,440"/>
+  </object>
+  <object id="31" x="624" y="1328">
+   <polygon points="0,0 0,-224 64,-224"/>
   </object>
  </objectgroup>
  <objectgroup id="3" name="finish">

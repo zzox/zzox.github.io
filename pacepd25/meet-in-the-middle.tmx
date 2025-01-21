@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="36">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextlayerid="11" nextobjectid="41">
  <objectgroup id="7" name="start">
   <object id="9" x="1536" y="528" width="16" height="16">
    <properties>
@@ -10,6 +10,20 @@
    <properties>
     <property name="rotation" type="int" value="0"/>
    </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="10" name="black">
+  <object id="37" x="32" y="480">
+   <polygon points="0,0 1536,112 0,112"/>
+  </object>
+  <object id="38" x="32" y="480">
+   <polygon points="0,0 1536,0 1536,112"/>
+  </object>
+  <object id="39" x="688" y="592">
+   <polygon points="0,0 0,848 240,0"/>
+  </object>
+  <object id="40" x="688" y="1440">
+   <polygon points="0,0 240,-848 240,0"/>
   </object>
  </objectgroup>
  <objectgroup id="6" name="finish">

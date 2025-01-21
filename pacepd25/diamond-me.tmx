@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="128" height="128" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="59">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="128" height="128" tilewidth="16" tileheight="16" infinite="0" nextlayerid="11" nextobjectid="73">
  <objectgroup id="7" name="start">
   <object id="9" x="1040" y="1984" width="16" height="16">
    <properties>
@@ -10,6 +10,50 @@
    <properties>
     <property name="rotation" type="int" value="0"/>
    </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="10" name="black">
+  <object id="59" x="912" y="1280">
+   <polygon points="0,0 0,736 224,736"/>
+  </object>
+  <object id="60" x="912" y="1280">
+   <polygon points="0,0 224,0 224,736"/>
+  </object>
+  <object id="61" x="912" y="1280">
+   <polygon points="0,0 112,-160 224,0"/>
+  </object>
+  <object id="62" x="912" y="1280">
+   <polygon points="0,0 -336,-416 112,-160"/>
+  </object>
+  <object id="63" x="1024" y="1120">
+   <polygon points="0,0 464,-256 112,160"/>
+  </object>
+  <object id="64" x="1488" y="864">
+   <polygon points="0,0 -208,0 -464,256"/>
+  </object>
+  <object id="65" x="1024" y="1120">
+   <polygon points="0,0 -448,-256 -256,-256"/>
+  </object>
+  <object id="66" x="576" y="864">
+   <polygon points="0,0 336,-336 448,-256"/>
+  </object>
+  <object id="67" x="576" y="864">
+   <polygon points="0,0 448,-256 192,0"/>
+  </object>
+  <object id="68" x="1024" y="608">
+   <polygon points="0,0 256,256 464,256"/>
+  </object>
+  <object id="69" x="1024" y="608">
+   <polygon points="0,0 112,-80 464,256"/>
+  </object>
+  <object id="70" x="912" y="256">
+   <polygon points="0,0 0,272 224,272"/>
+  </object>
+  <object id="71" x="1136" y="256">
+   <polygon points="0,0 -224,0 0,272"/>
+  </object>
+  <object id="72" x="912" y="528">
+   <polygon points="0,0 112,80 224,0"/>
   </object>
  </objectgroup>
  <objectgroup id="6" name="finish">

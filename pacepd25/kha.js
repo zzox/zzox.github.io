@@ -1409,6 +1409,9 @@ core_Sprite.prototype = $extend(core_Object.prototype,{
 	,rect: null
 	,line: null
 	,image: null
+	,v1: null
+	,v2: null
+	,v3: null
 	,animation: null
 	,tileIndex: null
 	,angle: null
@@ -1454,12 +1457,15 @@ core_Sprite.prototype = $extend(core_Object.prototype,{
 				g2.drawLine(this.x,this.y,this.line.to.x,this.line.to.y,this.line.width);
 				break;
 			case 4:
+				g2.fillTriangle(this.v1.x,this.v1.y,this.v2.x,this.v2.y,this.v3.x,this.v3.y);
+				break;
+			case 5:
 				g2.set_font(this.font);
 				g2.set_fontSize(this.fontSize);
 				g2.drawString(this.text,this.x,this.y);
 				this.textWidth = this.font.width(this.fontSize,this.text) | 0;
 				break;
-			case 5:
+			case 6:
 				var lineHeight = this.bitmapFont.getFontData().lineHeight;
 				var scrollPos = 0;
 				var xPos = Math.floor(this.x);
@@ -1477,7 +1483,7 @@ core_Sprite.prototype = $extend(core_Object.prototype,{
 				}
 				this.textWidth = scrollPos;
 				break;
-			case 6:
+			case 7:
 				var cols = Math.floor(this.image.get_width() / this.tileSize.x);
 				var _g = 0;
 				var _g1 = this.tiles.length;
@@ -1489,7 +1495,7 @@ core_Sprite.prototype = $extend(core_Object.prototype,{
 					}
 				}
 				break;
-			case 7:
+			case 8:
 				var cols = this.image.get_width() / this.size.x | 0;
 				g2.drawSubImage(this.image,this.x,this.y,this.tileIndex % cols * this.size.x,Math.floor(this.tileIndex / cols) * this.size.y,this.nineSliceData.topLeft.x,this.nineSliceData.topLeft.y);
 				g2.drawScaledSubImage(this.image,this.tileIndex % cols * this.size.x + this.nineSliceData.topLeft.x,Math.floor(this.tileIndex / cols) * this.size.y,this.nineSliceData.bottomRight.x - this.nineSliceData.topLeft.x,this.nineSliceData.topLeft.y,this.x + this.nineSliceData.topLeft.x,this.y,this.nineSliceData.size.x - this.nineSliceData.topLeft.x - (this.size.x - this.nineSliceData.bottomRight.x),this.nineSliceData.topLeft.y);
@@ -1533,6 +1539,12 @@ core_Sprite.prototype = $extend(core_Object.prototype,{
 		this.fontSize = fontSize;
 		this.textWidth = font.width(fontSize,text) | 0;
 		this.type = core_SpriteType.Text;
+	}
+	,makeTriangle: function(v1,v2,v3) {
+		this.v1 = v1;
+		this.v2 = v2;
+		this.v3 = v3;
+		this.type = core_SpriteType.Triangle;
 	}
 	,makeBitmapText: function(text,font) {
 		this.text = text;
@@ -2576,12 +2588,13 @@ var core_SpriteType = $hxEnums["core.SpriteType"] = { __ename__:"core.SpriteType
 	,Image: {_hx_name:"Image",_hx_index:1,__enum__:"core.SpriteType",toString:$estr}
 	,Rect: {_hx_name:"Rect",_hx_index:2,__enum__:"core.SpriteType",toString:$estr}
 	,Line: {_hx_name:"Line",_hx_index:3,__enum__:"core.SpriteType",toString:$estr}
-	,Text: {_hx_name:"Text",_hx_index:4,__enum__:"core.SpriteType",toString:$estr}
-	,BitmapText: {_hx_name:"BitmapText",_hx_index:5,__enum__:"core.SpriteType",toString:$estr}
-	,Tilemap: {_hx_name:"Tilemap",_hx_index:6,__enum__:"core.SpriteType",toString:$estr}
-	,NineSliceImage: {_hx_name:"NineSliceImage",_hx_index:7,__enum__:"core.SpriteType",toString:$estr}
+	,Triangle: {_hx_name:"Triangle",_hx_index:4,__enum__:"core.SpriteType",toString:$estr}
+	,Text: {_hx_name:"Text",_hx_index:5,__enum__:"core.SpriteType",toString:$estr}
+	,BitmapText: {_hx_name:"BitmapText",_hx_index:6,__enum__:"core.SpriteType",toString:$estr}
+	,Tilemap: {_hx_name:"Tilemap",_hx_index:7,__enum__:"core.SpriteType",toString:$estr}
+	,NineSliceImage: {_hx_name:"NineSliceImage",_hx_index:8,__enum__:"core.SpriteType",toString:$estr}
 };
-core_SpriteType.__constructs__ = [core_SpriteType.None,core_SpriteType.Image,core_SpriteType.Rect,core_SpriteType.Line,core_SpriteType.Text,core_SpriteType.BitmapText,core_SpriteType.Tilemap,core_SpriteType.NineSliceImage];
+core_SpriteType.__constructs__ = [core_SpriteType.None,core_SpriteType.Image,core_SpriteType.Rect,core_SpriteType.Line,core_SpriteType.Triangle,core_SpriteType.Text,core_SpriteType.BitmapText,core_SpriteType.Tilemap,core_SpriteType.NineSliceImage];
 var core_TiledMap = function(blobString) {
 	this.images = new haxe_ds_StringMap();
 	this.triangleGroups = new haxe_ds_StringMap();
@@ -9496,18 +9509,7 @@ echo_World.prototype = {
 							var _this2 = _this1.children[i1];
 							if(!_this2.pooled) {
 								_this2.pooled = true;
-								var _g4 = 0;
-								var _g5 = _this2.children.length;
-								while(_g4 < _g5) {
-									var i2 = _g4++;
-									if(_this2.children[i2] != null) {
-										_this2.children[i2].clear_children();
-										_this2.children[i2].put();
-										_this2.children[i2] = null;
-									}
-								}
-								_this2.contents.length = 0;
-								_this2.contents_count = 0;
+								_this2.clear();
 								_this2.nodes_list.length = 0;
 								echo_util_QuadTree.pool.put_unsafe(_this2);
 							}
@@ -9517,28 +9519,7 @@ echo_World.prototype = {
 					var _this3 = _this.children[i];
 					if(!_this3.pooled) {
 						_this3.pooled = true;
-						var _g6 = 0;
-						var _g7 = _this3.children.length;
-						while(_g6 < _g7) {
-							var i3 = _g6++;
-							if(_this3.children[i3] != null) {
-								var _this4 = _this3.children[i3];
-								var _g8 = 0;
-								var _g9 = _this4.children.length;
-								while(_g8 < _g9) {
-									var i4 = _g8++;
-									if(_this4.children[i4] != null) {
-										_this4.children[i4].clear_children();
-										_this4.children[i4].put();
-										_this4.children[i4] = null;
-									}
-								}
-								_this3.children[i3].put();
-								_this3.children[i3] = null;
-							}
-						}
-						_this3.contents.length = 0;
-						_this3.contents_count = 0;
+						_this3.clear();
 						_this3.nodes_list.length = 0;
 						echo_util_QuadTree.pool.put_unsafe(_this3);
 					}
@@ -9576,18 +9557,7 @@ echo_World.prototype = {
 								var _this2 = _this1.children[i1];
 								if(!_this2.pooled) {
 									_this2.pooled = true;
-									var _g4 = 0;
-									var _g5 = _this2.children.length;
-									while(_g4 < _g5) {
-										var i2 = _g4++;
-										if(_this2.children[i2] != null) {
-											_this2.children[i2].clear_children();
-											_this2.children[i2].put();
-											_this2.children[i2] = null;
-										}
-									}
-									_this2.contents.length = 0;
-									_this2.contents_count = 0;
+									_this2.clear();
 									_this2.nodes_list.length = 0;
 									echo_util_QuadTree.pool.put_unsafe(_this2);
 								}
@@ -9597,28 +9567,7 @@ echo_World.prototype = {
 						var _this3 = _this.children[i];
 						if(!_this3.pooled) {
 							_this3.pooled = true;
-							var _g6 = 0;
-							var _g7 = _this3.children.length;
-							while(_g6 < _g7) {
-								var i3 = _g6++;
-								if(_this3.children[i3] != null) {
-									var _this4 = _this3.children[i3];
-									var _g8 = 0;
-									var _g9 = _this4.children.length;
-									while(_g8 < _g9) {
-										var i4 = _g8++;
-										if(_this4.children[i4] != null) {
-											_this4.children[i4].clear_children();
-											_this4.children[i4].put();
-											_this4.children[i4] = null;
-										}
-									}
-									_this3.children[i3].put();
-									_this3.children[i3] = null;
-								}
-							}
-							_this3.contents.length = 0;
-							_this3.contents_count = 0;
+							_this3.clear();
 							_this3.nodes_list.length = 0;
 							echo_util_QuadTree.pool.put_unsafe(_this3);
 						}
@@ -9675,7 +9624,13 @@ echo_World.prototype = {
 								var i2 = _g4++;
 								if(_this1.children[i2] != null) {
 									_this1.children[i2].clear_children();
-									_this1.children[i2].put();
+									var _this2 = _this1.children[i2];
+									if(!_this2.pooled) {
+										_this2.pooled = true;
+										_this2.clear();
+										_this2.nodes_list.length = 0;
+										echo_util_QuadTree.pool.put_unsafe(_this2);
+									}
 									_this1.children[i2] = null;
 								}
 							}
@@ -9687,33 +9642,45 @@ echo_World.prototype = {
 						_this.children[i1] = null;
 					}
 				}
-				var _this2 = qt.children[i];
-				if(!_this2.pooled) {
-					_this2.pooled = true;
+				var _this3 = qt.children[i];
+				if(!_this3.pooled) {
+					_this3.pooled = true;
 					var _g6 = 0;
-					var _g7 = _this2.children.length;
+					var _g7 = _this3.children.length;
 					while(_g6 < _g7) {
 						var i3 = _g6++;
-						if(_this2.children[i3] != null) {
-							var _this3 = _this2.children[i3];
+						if(_this3.children[i3] != null) {
+							var _this4 = _this3.children[i3];
 							var _g8 = 0;
-							var _g9 = _this3.children.length;
+							var _g9 = _this4.children.length;
 							while(_g8 < _g9) {
 								var i4 = _g8++;
-								if(_this3.children[i4] != null) {
-									_this3.children[i4].clear_children();
-									_this3.children[i4].put();
-									_this3.children[i4] = null;
+								if(_this4.children[i4] != null) {
+									_this4.children[i4].clear_children();
+									var _this5 = _this4.children[i4];
+									if(!_this5.pooled) {
+										_this5.pooled = true;
+										_this5.clear();
+										_this5.nodes_list.length = 0;
+										echo_util_QuadTree.pool.put_unsafe(_this5);
+									}
+									_this4.children[i4] = null;
 								}
 							}
-							_this2.children[i3].put();
-							_this2.children[i3] = null;
+							var _this6 = _this3.children[i3];
+							if(!_this6.pooled) {
+								_this6.pooled = true;
+								_this6.clear();
+								_this6.nodes_list.length = 0;
+								echo_util_QuadTree.pool.put_unsafe(_this6);
+							}
+							_this3.children[i3] = null;
 						}
 					}
-					_this2.contents.length = 0;
-					_this2.contents_count = 0;
-					_this2.nodes_list.length = 0;
-					echo_util_QuadTree.pool.put_unsafe(_this2);
+					_this3.contents.length = 0;
+					_this3.contents_count = 0;
+					_this3.nodes_list.length = 0;
+					echo_util_QuadTree.pool.put_unsafe(_this3);
 				}
 				qt.children[i] = null;
 			}
@@ -9741,18 +9708,7 @@ echo_World.prototype = {
 								var _this2 = _this1.children[i1];
 								if(!_this2.pooled) {
 									_this2.pooled = true;
-									var _g4 = 0;
-									var _g5 = _this2.children.length;
-									while(_g4 < _g5) {
-										var i2 = _g4++;
-										if(_this2.children[i2] != null) {
-											_this2.children[i2].clear_children();
-											_this2.children[i2].put();
-											_this2.children[i2] = null;
-										}
-									}
-									_this2.contents.length = 0;
-									_this2.contents_count = 0;
+									_this2.clear();
 									_this2.nodes_list.length = 0;
 									echo_util_QuadTree.pool.put_unsafe(_this2);
 								}
@@ -9762,28 +9718,7 @@ echo_World.prototype = {
 						var _this3 = _this.children[i];
 						if(!_this3.pooled) {
 							_this3.pooled = true;
-							var _g6 = 0;
-							var _g7 = _this3.children.length;
-							while(_g6 < _g7) {
-								var i3 = _g6++;
-								if(_this3.children[i3] != null) {
-									var _this4 = _this3.children[i3];
-									var _g8 = 0;
-									var _g9 = _this4.children.length;
-									while(_g8 < _g9) {
-										var i4 = _g8++;
-										if(_this4.children[i4] != null) {
-											_this4.children[i4].clear_children();
-											_this4.children[i4].put();
-											_this4.children[i4] = null;
-										}
-									}
-									_this3.children[i3].put();
-									_this3.children[i3] = null;
-								}
-							}
-							_this3.contents.length = 0;
-							_this3.contents_count = 0;
+							_this3.clear();
 							_this3.nodes_list.length = 0;
 							echo_util_QuadTree.pool.put_unsafe(_this3);
 						}
@@ -9840,7 +9775,13 @@ echo_World.prototype = {
 								var i2 = _g4++;
 								if(_this1.children[i2] != null) {
 									_this1.children[i2].clear_children();
-									_this1.children[i2].put();
+									var _this2 = _this1.children[i2];
+									if(!_this2.pooled) {
+										_this2.pooled = true;
+										_this2.clear();
+										_this2.nodes_list.length = 0;
+										echo_util_QuadTree.pool.put_unsafe(_this2);
+									}
 									_this1.children[i2] = null;
 								}
 							}
@@ -9852,33 +9793,45 @@ echo_World.prototype = {
 						_this.children[i1] = null;
 					}
 				}
-				var _this2 = qt.children[i];
-				if(!_this2.pooled) {
-					_this2.pooled = true;
+				var _this3 = qt.children[i];
+				if(!_this3.pooled) {
+					_this3.pooled = true;
 					var _g6 = 0;
-					var _g7 = _this2.children.length;
+					var _g7 = _this3.children.length;
 					while(_g6 < _g7) {
 						var i3 = _g6++;
-						if(_this2.children[i3] != null) {
-							var _this3 = _this2.children[i3];
+						if(_this3.children[i3] != null) {
+							var _this4 = _this3.children[i3];
 							var _g8 = 0;
-							var _g9 = _this3.children.length;
+							var _g9 = _this4.children.length;
 							while(_g8 < _g9) {
 								var i4 = _g8++;
-								if(_this3.children[i4] != null) {
-									_this3.children[i4].clear_children();
-									_this3.children[i4].put();
-									_this3.children[i4] = null;
+								if(_this4.children[i4] != null) {
+									_this4.children[i4].clear_children();
+									var _this5 = _this4.children[i4];
+									if(!_this5.pooled) {
+										_this5.pooled = true;
+										_this5.clear();
+										_this5.nodes_list.length = 0;
+										echo_util_QuadTree.pool.put_unsafe(_this5);
+									}
+									_this4.children[i4] = null;
 								}
 							}
-							_this2.children[i3].put();
-							_this2.children[i3] = null;
+							var _this6 = _this3.children[i3];
+							if(!_this6.pooled) {
+								_this6.pooled = true;
+								_this6.clear();
+								_this6.nodes_list.length = 0;
+								echo_util_QuadTree.pool.put_unsafe(_this6);
+							}
+							_this3.children[i3] = null;
 						}
 					}
-					_this2.contents.length = 0;
-					_this2.contents_count = 0;
-					_this2.nodes_list.length = 0;
-					echo_util_QuadTree.pool.put_unsafe(_this2);
+					_this3.contents.length = 0;
+					_this3.contents_count = 0;
+					_this3.nodes_list.length = 0;
+					echo_util_QuadTree.pool.put_unsafe(_this3);
 				}
 				qt.children[i] = null;
 			}
@@ -23630,11 +23583,23 @@ echo_util_QuadTree.get = function(x,y,width,height) {
 														var i5 = _g10++;
 														if(_this4.children[i5] != null) {
 															_this4.children[i5].clear_children();
-															_this4.children[i5].put();
+															var _this5 = _this4.children[i5];
+															if(!_this5.pooled) {
+																_this5.pooled = true;
+																_this5.clear();
+																_this5.nodes_list.length = 0;
+																echo_util_QuadTree.pool.put_unsafe(_this5);
+															}
 															_this4.children[i5] = null;
 														}
 													}
-													_this3.children[i4].put();
+													var _this6 = _this3.children[i4];
+													if(!_this6.pooled) {
+														_this6.pooled = true;
+														_this6.clear();
+														_this6.nodes_list.length = 0;
+														echo_util_QuadTree.pool.put_unsafe(_this6);
+													}
 													_this3.children[i4] = null;
 												}
 											}
@@ -23646,33 +23611,45 @@ echo_util_QuadTree.get = function(x,y,width,height) {
 										_this2.children[i3] = null;
 									}
 								}
-								var _this5 = _this1.children[i2];
-								if(!_this5.pooled) {
-									_this5.pooled = true;
+								var _this7 = _this1.children[i2];
+								if(!_this7.pooled) {
+									_this7.pooled = true;
 									var _g12 = 0;
-									var _g13 = _this5.children.length;
+									var _g13 = _this7.children.length;
 									while(_g12 < _g13) {
 										var i6 = _g12++;
-										if(_this5.children[i6] != null) {
-											var _this6 = _this5.children[i6];
+										if(_this7.children[i6] != null) {
+											var _this8 = _this7.children[i6];
 											var _g14 = 0;
-											var _g15 = _this6.children.length;
+											var _g15 = _this8.children.length;
 											while(_g14 < _g15) {
 												var i7 = _g14++;
-												if(_this6.children[i7] != null) {
-													_this6.children[i7].clear_children();
-													_this6.children[i7].put();
-													_this6.children[i7] = null;
+												if(_this8.children[i7] != null) {
+													_this8.children[i7].clear_children();
+													var _this9 = _this8.children[i7];
+													if(!_this9.pooled) {
+														_this9.pooled = true;
+														_this9.clear();
+														_this9.nodes_list.length = 0;
+														echo_util_QuadTree.pool.put_unsafe(_this9);
+													}
+													_this8.children[i7] = null;
 												}
 											}
-											_this5.children[i6].put();
-											_this5.children[i6] = null;
+											var _this10 = _this7.children[i6];
+											if(!_this10.pooled) {
+												_this10.pooled = true;
+												_this10.clear();
+												_this10.nodes_list.length = 0;
+												echo_util_QuadTree.pool.put_unsafe(_this10);
+											}
+											_this7.children[i6] = null;
 										}
 									}
-									_this5.contents.length = 0;
-									_this5.contents_count = 0;
-									_this5.nodes_list.length = 0;
-									echo_util_QuadTree.pool.put_unsafe(_this5);
+									_this7.contents.length = 0;
+									_this7.contents_count = 0;
+									_this7.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this7);
 								}
 								_this1.children[i2] = null;
 							}
@@ -23685,70 +23662,94 @@ echo_util_QuadTree.get = function(x,y,width,height) {
 					_this.children[i1] = null;
 				}
 			}
-			var _this7 = qt.children[i];
-			if(!_this7.pooled) {
-				_this7.pooled = true;
+			var _this11 = qt.children[i];
+			if(!_this11.pooled) {
+				_this11.pooled = true;
 				var _g16 = 0;
-				var _g17 = _this7.children.length;
+				var _g17 = _this11.children.length;
 				while(_g16 < _g17) {
 					var i8 = _g16++;
-					if(_this7.children[i8] != null) {
-						var _this8 = _this7.children[i8];
+					if(_this11.children[i8] != null) {
+						var _this12 = _this11.children[i8];
 						var _g18 = 0;
-						var _g19 = _this8.children.length;
+						var _g19 = _this12.children.length;
 						while(_g18 < _g19) {
 							var i9 = _g18++;
-							if(_this8.children[i9] != null) {
-								var _this9 = _this8.children[i9];
+							if(_this12.children[i9] != null) {
+								var _this13 = _this12.children[i9];
 								var _g20 = 0;
-								var _g21 = _this9.children.length;
+								var _g21 = _this13.children.length;
 								while(_g20 < _g21) {
 									var i10 = _g20++;
-									if(_this9.children[i10] != null) {
-										_this9.children[i10].clear_children();
-										var _this10 = _this9.children[i10];
-										if(!_this10.pooled) {
-											_this10.pooled = true;
+									if(_this13.children[i10] != null) {
+										_this13.children[i10].clear_children();
+										var _this14 = _this13.children[i10];
+										if(!_this14.pooled) {
+											_this14.pooled = true;
 											var _g22 = 0;
-											var _g23 = _this10.children.length;
+											var _g23 = _this14.children.length;
 											while(_g22 < _g23) {
 												var i11 = _g22++;
-												if(_this10.children[i11] != null) {
-													var _this11 = _this10.children[i11];
+												if(_this14.children[i11] != null) {
+													var _this15 = _this14.children[i11];
 													var _g24 = 0;
-													var _g25 = _this11.children.length;
+													var _g25 = _this15.children.length;
 													while(_g24 < _g25) {
 														var i12 = _g24++;
-														if(_this11.children[i12] != null) {
-															_this11.children[i12].clear_children();
-															_this11.children[i12].put();
-															_this11.children[i12] = null;
+														if(_this15.children[i12] != null) {
+															_this15.children[i12].clear_children();
+															var _this16 = _this15.children[i12];
+															if(!_this16.pooled) {
+																_this16.pooled = true;
+																_this16.clear();
+																_this16.nodes_list.length = 0;
+																echo_util_QuadTree.pool.put_unsafe(_this16);
+															}
+															_this15.children[i12] = null;
 														}
 													}
-													_this10.children[i11].put();
-													_this10.children[i11] = null;
+													var _this17 = _this14.children[i11];
+													if(!_this17.pooled) {
+														_this17.pooled = true;
+														_this17.clear();
+														_this17.nodes_list.length = 0;
+														echo_util_QuadTree.pool.put_unsafe(_this17);
+													}
+													_this14.children[i11] = null;
 												}
 											}
-											_this10.contents.length = 0;
-											_this10.contents_count = 0;
-											_this10.nodes_list.length = 0;
-											echo_util_QuadTree.pool.put_unsafe(_this10);
+											_this14.contents.length = 0;
+											_this14.contents_count = 0;
+											_this14.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this14);
 										}
-										_this9.children[i10] = null;
+										_this13.children[i10] = null;
 									}
 								}
-								_this8.children[i9].put();
-								_this8.children[i9] = null;
+								var _this18 = _this12.children[i9];
+								if(!_this18.pooled) {
+									_this18.pooled = true;
+									_this18.clear();
+									_this18.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this18);
+								}
+								_this12.children[i9] = null;
 							}
 						}
-						_this7.children[i8].put();
-						_this7.children[i8] = null;
+						var _this19 = _this11.children[i8];
+						if(!_this19.pooled) {
+							_this19.pooled = true;
+							_this19.clear();
+							_this19.nodes_list.length = 0;
+							echo_util_QuadTree.pool.put_unsafe(_this19);
+						}
+						_this11.children[i8] = null;
 					}
 				}
-				_this7.contents.length = 0;
-				_this7.contents_count = 0;
-				_this7.nodes_list.length = 0;
-				echo_util_QuadTree.pool.put_unsafe(_this7);
+				_this11.contents.length = 0;
+				_this11.contents_count = 0;
+				_this11.nodes_list.length = 0;
+				echo_util_QuadTree.pool.put_unsafe(_this11);
 			}
 			qt.children[i] = null;
 		}
@@ -23806,11 +23807,23 @@ echo_util_QuadTree.get_from_min_max = function(min_x,min_y,max_x,max_y) {
 														var i5 = _g10++;
 														if(_this4.children[i5] != null) {
 															_this4.children[i5].clear_children();
-															_this4.children[i5].put();
+															var _this5 = _this4.children[i5];
+															if(!_this5.pooled) {
+																_this5.pooled = true;
+																_this5.clear();
+																_this5.nodes_list.length = 0;
+																echo_util_QuadTree.pool.put_unsafe(_this5);
+															}
 															_this4.children[i5] = null;
 														}
 													}
-													_this3.children[i4].put();
+													var _this6 = _this3.children[i4];
+													if(!_this6.pooled) {
+														_this6.pooled = true;
+														_this6.clear();
+														_this6.nodes_list.length = 0;
+														echo_util_QuadTree.pool.put_unsafe(_this6);
+													}
 													_this3.children[i4] = null;
 												}
 											}
@@ -23822,33 +23835,45 @@ echo_util_QuadTree.get_from_min_max = function(min_x,min_y,max_x,max_y) {
 										_this2.children[i3] = null;
 									}
 								}
-								var _this5 = _this1.children[i2];
-								if(!_this5.pooled) {
-									_this5.pooled = true;
+								var _this7 = _this1.children[i2];
+								if(!_this7.pooled) {
+									_this7.pooled = true;
 									var _g12 = 0;
-									var _g13 = _this5.children.length;
+									var _g13 = _this7.children.length;
 									while(_g12 < _g13) {
 										var i6 = _g12++;
-										if(_this5.children[i6] != null) {
-											var _this6 = _this5.children[i6];
+										if(_this7.children[i6] != null) {
+											var _this8 = _this7.children[i6];
 											var _g14 = 0;
-											var _g15 = _this6.children.length;
+											var _g15 = _this8.children.length;
 											while(_g14 < _g15) {
 												var i7 = _g14++;
-												if(_this6.children[i7] != null) {
-													_this6.children[i7].clear_children();
-													_this6.children[i7].put();
-													_this6.children[i7] = null;
+												if(_this8.children[i7] != null) {
+													_this8.children[i7].clear_children();
+													var _this9 = _this8.children[i7];
+													if(!_this9.pooled) {
+														_this9.pooled = true;
+														_this9.clear();
+														_this9.nodes_list.length = 0;
+														echo_util_QuadTree.pool.put_unsafe(_this9);
+													}
+													_this8.children[i7] = null;
 												}
 											}
-											_this5.children[i6].put();
-											_this5.children[i6] = null;
+											var _this10 = _this7.children[i6];
+											if(!_this10.pooled) {
+												_this10.pooled = true;
+												_this10.clear();
+												_this10.nodes_list.length = 0;
+												echo_util_QuadTree.pool.put_unsafe(_this10);
+											}
+											_this7.children[i6] = null;
 										}
 									}
-									_this5.contents.length = 0;
-									_this5.contents_count = 0;
-									_this5.nodes_list.length = 0;
-									echo_util_QuadTree.pool.put_unsafe(_this5);
+									_this7.contents.length = 0;
+									_this7.contents_count = 0;
+									_this7.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this7);
 								}
 								_this1.children[i2] = null;
 							}
@@ -23861,70 +23886,94 @@ echo_util_QuadTree.get_from_min_max = function(min_x,min_y,max_x,max_y) {
 					_this.children[i1] = null;
 				}
 			}
-			var _this7 = qt.children[i];
-			if(!_this7.pooled) {
-				_this7.pooled = true;
+			var _this11 = qt.children[i];
+			if(!_this11.pooled) {
+				_this11.pooled = true;
 				var _g16 = 0;
-				var _g17 = _this7.children.length;
+				var _g17 = _this11.children.length;
 				while(_g16 < _g17) {
 					var i8 = _g16++;
-					if(_this7.children[i8] != null) {
-						var _this8 = _this7.children[i8];
+					if(_this11.children[i8] != null) {
+						var _this12 = _this11.children[i8];
 						var _g18 = 0;
-						var _g19 = _this8.children.length;
+						var _g19 = _this12.children.length;
 						while(_g18 < _g19) {
 							var i9 = _g18++;
-							if(_this8.children[i9] != null) {
-								var _this9 = _this8.children[i9];
+							if(_this12.children[i9] != null) {
+								var _this13 = _this12.children[i9];
 								var _g20 = 0;
-								var _g21 = _this9.children.length;
+								var _g21 = _this13.children.length;
 								while(_g20 < _g21) {
 									var i10 = _g20++;
-									if(_this9.children[i10] != null) {
-										_this9.children[i10].clear_children();
-										var _this10 = _this9.children[i10];
-										if(!_this10.pooled) {
-											_this10.pooled = true;
+									if(_this13.children[i10] != null) {
+										_this13.children[i10].clear_children();
+										var _this14 = _this13.children[i10];
+										if(!_this14.pooled) {
+											_this14.pooled = true;
 											var _g22 = 0;
-											var _g23 = _this10.children.length;
+											var _g23 = _this14.children.length;
 											while(_g22 < _g23) {
 												var i11 = _g22++;
-												if(_this10.children[i11] != null) {
-													var _this11 = _this10.children[i11];
+												if(_this14.children[i11] != null) {
+													var _this15 = _this14.children[i11];
 													var _g24 = 0;
-													var _g25 = _this11.children.length;
+													var _g25 = _this15.children.length;
 													while(_g24 < _g25) {
 														var i12 = _g24++;
-														if(_this11.children[i12] != null) {
-															_this11.children[i12].clear_children();
-															_this11.children[i12].put();
-															_this11.children[i12] = null;
+														if(_this15.children[i12] != null) {
+															_this15.children[i12].clear_children();
+															var _this16 = _this15.children[i12];
+															if(!_this16.pooled) {
+																_this16.pooled = true;
+																_this16.clear();
+																_this16.nodes_list.length = 0;
+																echo_util_QuadTree.pool.put_unsafe(_this16);
+															}
+															_this15.children[i12] = null;
 														}
 													}
-													_this10.children[i11].put();
-													_this10.children[i11] = null;
+													var _this17 = _this14.children[i11];
+													if(!_this17.pooled) {
+														_this17.pooled = true;
+														_this17.clear();
+														_this17.nodes_list.length = 0;
+														echo_util_QuadTree.pool.put_unsafe(_this17);
+													}
+													_this14.children[i11] = null;
 												}
 											}
-											_this10.contents.length = 0;
-											_this10.contents_count = 0;
-											_this10.nodes_list.length = 0;
-											echo_util_QuadTree.pool.put_unsafe(_this10);
+											_this14.contents.length = 0;
+											_this14.contents_count = 0;
+											_this14.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this14);
 										}
-										_this9.children[i10] = null;
+										_this13.children[i10] = null;
 									}
 								}
-								_this8.children[i9].put();
-								_this8.children[i9] = null;
+								var _this18 = _this12.children[i9];
+								if(!_this18.pooled) {
+									_this18.pooled = true;
+									_this18.clear();
+									_this18.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this18);
+								}
+								_this12.children[i9] = null;
 							}
 						}
-						_this7.children[i8].put();
-						_this7.children[i8] = null;
+						var _this19 = _this11.children[i8];
+						if(!_this19.pooled) {
+							_this19.pooled = true;
+							_this19.clear();
+							_this19.nodes_list.length = 0;
+							echo_util_QuadTree.pool.put_unsafe(_this19);
+						}
+						_this11.children[i8] = null;
 					}
 				}
-				_this7.contents.length = 0;
-				_this7.contents_count = 0;
-				_this7.nodes_list.length = 0;
-				echo_util_QuadTree.pool.put_unsafe(_this7);
+				_this11.contents.length = 0;
+				_this11.contents_count = 0;
+				_this11.nodes_list.length = 0;
+				echo_util_QuadTree.pool.put_unsafe(_this11);
 			}
 			qt.children[i] = null;
 		}
@@ -23962,11 +24011,23 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 						var i1 = _g2++;
 						if(_this.children[i1] != null) {
 							_this.children[i1].clear_children();
-							_this.children[i1].put();
+							var _this1 = _this.children[i1];
+							if(!_this1.pooled) {
+								_this1.pooled = true;
+								_this1.clear();
+								_this1.nodes_list.length = 0;
+								echo_util_QuadTree.pool.put_unsafe(_this1);
+							}
 							_this.children[i1] = null;
 						}
 					}
-					this.children[i].put();
+					var _this2 = this.children[i];
+					if(!_this2.pooled) {
+						_this2.pooled = true;
+						_this2.clear();
+						_this2.nodes_list.length = 0;
+						echo_util_QuadTree.pool.put_unsafe(_this2);
+					}
 					this.children[i] = null;
 				}
 			}
@@ -24100,18 +24161,14 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 								while(_g4 < _g5) {
 									var i2 = _g4++;
 									if(_this1.children[i2] != null) {
+										_this1.children[i2].clear_children();
 										var _this2 = _this1.children[i2];
-										var _g6 = 0;
-										var _g7 = _this2.children.length;
-										while(_g6 < _g7) {
-											var i3 = _g6++;
-											if(_this2.children[i3] != null) {
-												_this2.children[i3].clear_children();
-												_this2.children[i3].put();
-												_this2.children[i3] = null;
-											}
+										if(!_this2.pooled) {
+											_this2.pooled = true;
+											_this2.clear();
+											_this2.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this2);
 										}
-										_this1.children[i2].put();
 										_this1.children[i2] = null;
 									}
 								}
@@ -24126,34 +24183,36 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 					var _this3 = this.children[i];
 					if(!_this3.pooled) {
 						_this3.pooled = true;
-						var _g8 = 0;
-						var _g9 = _this3.children.length;
-						while(_g8 < _g9) {
-							var i4 = _g8++;
-							if(_this3.children[i4] != null) {
-								var _this4 = _this3.children[i4];
-								var _g10 = 0;
-								var _g11 = _this4.children.length;
-								while(_g10 < _g11) {
-									var i5 = _g10++;
-									if(_this4.children[i5] != null) {
-										var _this5 = _this4.children[i5];
-										var _g12 = 0;
-										var _g13 = _this5.children.length;
-										while(_g12 < _g13) {
-											var i6 = _g12++;
-											if(_this5.children[i6] != null) {
-												_this5.children[i6].clear_children();
-												_this5.children[i6].put();
-												_this5.children[i6] = null;
-											}
+						var _g6 = 0;
+						var _g7 = _this3.children.length;
+						while(_g6 < _g7) {
+							var i3 = _g6++;
+							if(_this3.children[i3] != null) {
+								var _this4 = _this3.children[i3];
+								var _g8 = 0;
+								var _g9 = _this4.children.length;
+								while(_g8 < _g9) {
+									var i4 = _g8++;
+									if(_this4.children[i4] != null) {
+										_this4.children[i4].clear_children();
+										var _this5 = _this4.children[i4];
+										if(!_this5.pooled) {
+											_this5.pooled = true;
+											_this5.clear();
+											_this5.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this5);
 										}
-										_this4.children[i5].put();
-										_this4.children[i5] = null;
+										_this4.children[i4] = null;
 									}
 								}
-								_this3.children[i4].put();
-								_this3.children[i4] = null;
+								var _this6 = _this3.children[i3];
+								if(!_this6.pooled) {
+									_this6.pooled = true;
+									_this6.clear();
+									_this6.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this6);
+								}
+								_this3.children[i3] = null;
 							}
 						}
 						_this3.contents.length = 0;
@@ -24215,18 +24274,14 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 								while(_g4 < _g5) {
 									var i2 = _g4++;
 									if(_this1.children[i2] != null) {
+										_this1.children[i2].clear_children();
 										var _this2 = _this1.children[i2];
-										var _g6 = 0;
-										var _g7 = _this2.children.length;
-										while(_g6 < _g7) {
-											var i3 = _g6++;
-											if(_this2.children[i3] != null) {
-												_this2.children[i3].clear_children();
-												_this2.children[i3].put();
-												_this2.children[i3] = null;
-											}
+										if(!_this2.pooled) {
+											_this2.pooled = true;
+											_this2.clear();
+											_this2.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this2);
 										}
-										_this1.children[i2].put();
 										_this1.children[i2] = null;
 									}
 								}
@@ -24241,34 +24296,36 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 					var _this3 = this.children[i];
 					if(!_this3.pooled) {
 						_this3.pooled = true;
-						var _g8 = 0;
-						var _g9 = _this3.children.length;
-						while(_g8 < _g9) {
-							var i4 = _g8++;
-							if(_this3.children[i4] != null) {
-								var _this4 = _this3.children[i4];
-								var _g10 = 0;
-								var _g11 = _this4.children.length;
-								while(_g10 < _g11) {
-									var i5 = _g10++;
-									if(_this4.children[i5] != null) {
-										var _this5 = _this4.children[i5];
-										var _g12 = 0;
-										var _g13 = _this5.children.length;
-										while(_g12 < _g13) {
-											var i6 = _g12++;
-											if(_this5.children[i6] != null) {
-												_this5.children[i6].clear_children();
-												_this5.children[i6].put();
-												_this5.children[i6] = null;
-											}
+						var _g6 = 0;
+						var _g7 = _this3.children.length;
+						while(_g6 < _g7) {
+							var i3 = _g6++;
+							if(_this3.children[i3] != null) {
+								var _this4 = _this3.children[i3];
+								var _g8 = 0;
+								var _g9 = _this4.children.length;
+								while(_g8 < _g9) {
+									var i4 = _g8++;
+									if(_this4.children[i4] != null) {
+										_this4.children[i4].clear_children();
+										var _this5 = _this4.children[i4];
+										if(!_this5.pooled) {
+											_this5.pooled = true;
+											_this5.clear();
+											_this5.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this5);
 										}
-										_this4.children[i5].put();
-										_this4.children[i5] = null;
+										_this4.children[i4] = null;
 									}
 								}
-								_this3.children[i4].put();
-								_this3.children[i4] = null;
+								var _this6 = _this3.children[i3];
+								if(!_this6.pooled) {
+									_this6.pooled = true;
+									_this6.clear();
+									_this6.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this6);
+								}
+								_this3.children[i3] = null;
 							}
 						}
 						_this3.contents.length = 0;
@@ -24335,18 +24392,14 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 								while(_g5 < _g6) {
 									var i3 = _g5++;
 									if(_this1.children[i3] != null) {
+										_this1.children[i3].clear_children();
 										var _this2 = _this1.children[i3];
-										var _g7 = 0;
-										var _g8 = _this2.children.length;
-										while(_g7 < _g8) {
-											var i4 = _g7++;
-											if(_this2.children[i4] != null) {
-												_this2.children[i4].clear_children();
-												_this2.children[i4].put();
-												_this2.children[i4] = null;
-											}
+										if(!_this2.pooled) {
+											_this2.pooled = true;
+											_this2.clear();
+											_this2.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this2);
 										}
-										_this1.children[i3].put();
 										_this1.children[i3] = null;
 									}
 								}
@@ -24361,34 +24414,36 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 					var _this3 = qt.children[i1];
 					if(!_this3.pooled) {
 						_this3.pooled = true;
-						var _g9 = 0;
-						var _g10 = _this3.children.length;
-						while(_g9 < _g10) {
-							var i5 = _g9++;
-							if(_this3.children[i5] != null) {
-								var _this4 = _this3.children[i5];
-								var _g11 = 0;
-								var _g12 = _this4.children.length;
-								while(_g11 < _g12) {
-									var i6 = _g11++;
-									if(_this4.children[i6] != null) {
-										var _this5 = _this4.children[i6];
-										var _g13 = 0;
-										var _g14 = _this5.children.length;
-										while(_g13 < _g14) {
-											var i7 = _g13++;
-											if(_this5.children[i7] != null) {
-												_this5.children[i7].clear_children();
-												_this5.children[i7].put();
-												_this5.children[i7] = null;
-											}
+						var _g7 = 0;
+						var _g8 = _this3.children.length;
+						while(_g7 < _g8) {
+							var i4 = _g7++;
+							if(_this3.children[i4] != null) {
+								var _this4 = _this3.children[i4];
+								var _g9 = 0;
+								var _g10 = _this4.children.length;
+								while(_g9 < _g10) {
+									var i5 = _g9++;
+									if(_this4.children[i5] != null) {
+										_this4.children[i5].clear_children();
+										var _this5 = _this4.children[i5];
+										if(!_this5.pooled) {
+											_this5.pooled = true;
+											_this5.clear();
+											_this5.nodes_list.length = 0;
+											echo_util_QuadTree.pool.put_unsafe(_this5);
 										}
-										_this4.children[i6].put();
-										_this4.children[i6] = null;
+										_this4.children[i5] = null;
 									}
 								}
-								_this3.children[i5].put();
-								_this3.children[i5] = null;
+								var _this6 = _this3.children[i4];
+								if(!_this6.pooled) {
+									_this6.pooled = true;
+									_this6.clear();
+									_this6.nodes_list.length = 0;
+									echo_util_QuadTree.pool.put_unsafe(_this6);
+								}
+								_this3.children[i4] = null;
 							}
 						}
 						_this3.contents.length = 0;
@@ -24435,57 +24490,57 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 			}
 			child.depth = this.depth + 1;
 			var value = this.max_depth;
+			var _g11 = 0;
+			var _g12 = child.children.length;
+			while(_g11 < _g12) {
+				var i6 = _g11++;
+				if(child.children[i6] != null) {
+					var _this7 = child.children[i6];
+					var _g13 = 0;
+					var _g14 = _this7.children.length;
+					while(_g13 < _g14) {
+						var i7 = _g13++;
+						if(_this7.children[i7] != null) {
+							_this7.children[i7].set_max_depth(value);
+						}
+					}
+					_this7.max_depth = value;
+				}
+			}
+			child.max_depth = value;
+			var value1 = this.max_contents;
 			var _g15 = 0;
 			var _g16 = child.children.length;
 			while(_g15 < _g16) {
 				var i8 = _g15++;
 				if(child.children[i8] != null) {
-					var _this6 = child.children[i8];
+					var _this8 = child.children[i8];
 					var _g17 = 0;
-					var _g18 = _this6.children.length;
+					var _g18 = _this8.children.length;
 					while(_g17 < _g18) {
 						var i9 = _g17++;
-						if(_this6.children[i9] != null) {
-							_this6.children[i9].set_max_depth(value);
-						}
-					}
-					_this6.max_depth = value;
-				}
-			}
-			child.max_depth = value;
-			var value1 = this.max_contents;
-			var _g19 = 0;
-			var _g20 = child.children.length;
-			while(_g19 < _g20) {
-				var i10 = _g19++;
-				if(child.children[i10] != null) {
-					var _this7 = child.children[i10];
-					var _g21 = 0;
-					var _g22 = _this7.children.length;
-					while(_g21 < _g22) {
-						var i11 = _g21++;
-						if(_this7.children[i11] != null) {
-							var _this8 = _this7.children[i11];
-							var _g23 = 0;
-							var _g24 = _this8.children.length;
-							while(_g23 < _g24) {
-								var i12 = _g23++;
-								if(_this8.children[i12] != null) {
-									_this8.children[i12].set_max_depth(value1);
+						if(_this8.children[i9] != null) {
+							var _this9 = _this8.children[i9];
+							var _g19 = 0;
+							var _g20 = _this9.children.length;
+							while(_g19 < _g20) {
+								var i10 = _g19++;
+								if(_this9.children[i10] != null) {
+									_this9.children[i10].set_max_depth(value1);
 								}
 							}
-							_this8.max_depth = value1;
+							_this9.max_depth = value1;
 						}
 					}
-					_this7.max_depth = value1;
+					_this8.max_depth = value1;
 				}
 			}
 			child.max_contents = value1;
 			child.shake();
-			var _g25 = 0;
-			var _g26 = this.contents.length;
-			while(_g25 < _g26) {
-				var j = _g25++;
+			var _g21 = 0;
+			var _g22 = this.contents.length;
+			while(_g21 < _g22) {
+				var j = _g21++;
 				if(this.contents[j] != null) {
 					child.insert(this.contents[j]);
 				}
@@ -24511,71 +24566,19 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 						var _this1 = _this.children[i1];
 						if(!_this1.pooled) {
 							_this1.pooled = true;
-							var _g4 = 0;
-							var _g5 = _this1.children.length;
-							while(_g4 < _g5) {
-								var i2 = _g4++;
-								if(_this1.children[i2] != null) {
-									var _this2 = _this1.children[i2];
-									var _g6 = 0;
-									var _g7 = _this2.children.length;
-									while(_g6 < _g7) {
-										var i3 = _g6++;
-										if(_this2.children[i3] != null) {
-											_this2.children[i3].clear_children();
-											_this2.children[i3].put();
-											_this2.children[i3] = null;
-										}
-									}
-									_this1.children[i2].put();
-									_this1.children[i2] = null;
-								}
-							}
-							_this1.contents.length = 0;
-							_this1.contents_count = 0;
+							_this1.clear();
 							_this1.nodes_list.length = 0;
 							echo_util_QuadTree.pool.put_unsafe(_this1);
 						}
 						_this.children[i1] = null;
 					}
 				}
-				var _this3 = this.children[i];
-				if(!_this3.pooled) {
-					_this3.pooled = true;
-					var _g8 = 0;
-					var _g9 = _this3.children.length;
-					while(_g8 < _g9) {
-						var i4 = _g8++;
-						if(_this3.children[i4] != null) {
-							var _this4 = _this3.children[i4];
-							var _g10 = 0;
-							var _g11 = _this4.children.length;
-							while(_g10 < _g11) {
-								var i5 = _g10++;
-								if(_this4.children[i5] != null) {
-									var _this5 = _this4.children[i5];
-									var _g12 = 0;
-									var _g13 = _this5.children.length;
-									while(_g12 < _g13) {
-										var i6 = _g12++;
-										if(_this5.children[i6] != null) {
-											_this5.children[i6].clear_children();
-											_this5.children[i6].put();
-											_this5.children[i6] = null;
-										}
-									}
-									_this4.children[i5].put();
-									_this4.children[i5] = null;
-								}
-							}
-							_this3.children[i4].put();
-							_this3.children[i4] = null;
-						}
-					}
-					_this3.contents.length = 0;
-					_this3.contents_count = 0;
-					_this3.nodes_list.length = 0;
-					echo_util_QuadTree.pool.put_unsafe(_this3);
+				var _this2 = this.children[i];
+				if(!_this2.pooled) {
+					_this2.pooled = true;
+					_this2.clear();
+					_this2.nodes_list.length = 0;
+					echo_util_QuadTree.pool.put_unsafe(_this2);
 				}
 				this.children[i] = null;
 			}
@@ -24605,11 +24608,23 @@ echo_util_QuadTree.prototype = $extend(echo_util_AABB.prototype,{
 								var i2 = _g4++;
 								if(_this1.children[i2] != null) {
 									_this1.children[i2].clear_children();
-									_this1.children[i2].put();
+									var _this2 = _this1.children[i2];
+									if(!_this2.pooled) {
+										_this2.pooled = true;
+										_this2.clear();
+										_this2.nodes_list.length = 0;
+										echo_util_QuadTree.pool.put_unsafe(_this2);
+									}
 									_this1.children[i2] = null;
 								}
 							}
-							_this.children[i1].put();
+							var _this3 = _this.children[i1];
+							if(!_this3.pooled) {
+								_this3.pooled = true;
+								_this3.clear();
+								_this3.nodes_list.length = 0;
+								echo_util_QuadTree.pool.put_unsafe(_this3);
+							}
 							_this.children[i1] = null;
 						}
 					}
@@ -33184,7 +33199,7 @@ game_conn_Conn.prototype = {
 		this.onPeerConnect = onPeerConnect;
 		this.onPeerDisconnect = onPeerDisconnect;
 		this.onRemoteInput = onRemoteInput;
-		this.ws = new game_conn_Ws("wss://pacepd25-e2ef41da108c.herokuapp.com/",function() {
+		this.ws = new game_conn_Ws("ws://localhost:6969",function() {
 			_gthis.socketConnectState = game_conn_SocketConnectionState.SCConnected;
 			_gthis.onServerConnect();
 		},function() {
@@ -33592,9 +33607,19 @@ var game_groups_WorldGroup = function(tilemap,minimapSize,numActors,handleCrash,
 	this.ships = [];
 	core_Group.call(this);
 	this.world = new echo_World({ width : 2048, height : 2048, iterations : 2});
+	var _g = 0;
+	var _g1 = tilemap.triangleGroups.h["black"];
+	while(_g < _g1.length) {
+		var b = _g1[_g];
+		++_g;
+		var spr = new core_Sprite(new core_Vec2(0,0));
+		spr.makeTriangle(new core_Vec2(b.v1.x,b.v1.y),new core_Vec2(b.v2.x,b.v2.y),new core_Vec2(b.v3.x,b.v3.y));
+		spr.color = -16777216;
+		this.addChild(spr);
+	}
 	this.startPositions = tilemap.objectGroups.h["start"];
 	var finishRect = tilemap.objectGroups.h["finish"][0];
-	this.addChild(this.finishBox = new game_objects_FinishBox(finishRect.x | 0,finishRect.y | 0,finishRect.width | 0,finishRect.height | 0));
+	this.finishBox = new game_objects_FinishBox(finishRect.x | 0,finishRect.y | 0,finishRect.width | 0,finishRect.height | 0);
 	this.world.add(this.finishBox.echoBody);
 	var _g = 0;
 	var _g1 = numActors;
@@ -33745,11 +33770,17 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 			if(this.ships[i].crashFrame == 120) {
 				this.resetShip(i);
 			}
-			if(this.ships[i].health <= 0 && this.crashes[i] == 0) {
+			if(this.ships[i].health <= 0 && this.ships[i].rbCrashFrame == null) {
+				this.ships[i].rbCrashFrame = this.rollbackFrame;
+			}
+			if(this.ships[i].finishFrame != null && this.ships[i].rbFinishFrame == null) {
+				this.ships[i].rbFinishFrame = this.rollbackFrame;
+			}
+			if(this.ships[i].health <= 0 && this.ships[i].rbCrashFrame != null && confirmFrame >= this.ships[i].rbCrashFrame && this.crashes[i] == 0) {
 				this.shipCrash(this.ships[i]);
 				this.crashes[i]++;
 			}
-			if(this.finishFrames[i] == null && this.ships[i].finishFrame != null) {
+			if(this.finishFrames[i] == null && this.ships[i].rbFinishFrame != null && confirmFrame >= this.ships[i].rbFinishFrame != null) {
 				this.shipFinish(this.ships[i]);
 				this.finishFrames[i] = this.ships[i].finishFrame;
 			}
@@ -33962,7 +33993,7 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		while(_g < _g1) {
 			var i = _g++;
 			var ship = _this[i];
-			result[i] = { x : ship.echoBody.transform.local_x, y : ship.echoBody.transform.local_y, accX : ship.echoBody.acceleration.x, accY : ship.echoBody.acceleration.y, drag : ship.echoBody.drag_length, velX : ship.echoBody.velocity.x, velY : ship.echoBody.velocity.y, accelerationAngle : ship.accelerationAngle, movingAngle : ship.movingAngle, vel : ship.vel, prevX : ship.prevX, prevY : ship.prevY, hurtFrame : ship.hurtFrame, crashFrame : ship.crashFrame, health : ship.health, finishFrame : ship.finishFrame};
+			result[i] = { x : ship.echoBody.transform.local_x, y : ship.echoBody.transform.local_y, accX : ship.echoBody.acceleration.x, accY : ship.echoBody.acceleration.y, drag : ship.echoBody.drag_length, velX : ship.echoBody.velocity.x, velY : ship.echoBody.velocity.y, accelerationAngle : ship.accelerationAngle, movingAngle : ship.movingAngle, vel : ship.vel, prevX : ship.prevX, prevY : ship.prevY, hurtFrame : ship.hurtFrame, crashFrame : ship.crashFrame, health : ship.health, finishFrame : ship.finishFrame, rbCrashFrame : ship.rbCrashFrame, rbFinishFrame : ship.rbFinishFrame};
 		}
 		return { frame : tmp, ships : result};
 	}
@@ -34006,6 +34037,8 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 			this.ships[i].hurtFrame = state.ships[i].hurtFrame;
 			this.ships[i].health = state.ships[i].health;
 			this.ships[i].finishFrame = state.ships[i].finishFrame;
+			this.ships[i].rbCrashFrame = state.ships[i].rbCrashFrame;
+			this.ships[i].rbFinishFrame = state.ships[i].rbFinishFrame;
 		}
 	}
 	,__class__: game_groups_WorldGroup
@@ -34014,6 +34047,7 @@ var game_objects_FinishBox = function(x,y,width,height) {
 	core_Sprite.call(this,new core_Vec2(x,y));
 	this.makeRect(-265674,new core_IntVec2(width,height));
 	this.echoBody = new echo_Body({ x : x + width / 2, y : y + height / 2, mass : 0, shape : { type : 0, height : height, width : width}});
+	this.depth = 1000;
 };
 $hxClasses["game.objects.FinishBox"] = game_objects_FinishBox;
 game_objects_FinishBox.__name__ = "game.objects.FinishBox";
@@ -34137,6 +34171,8 @@ game_objects_Ship.prototype = $extend(core_Sprite.prototype,{
 	,shipListener: null
 	,colListener: null
 	,finishListener: null
+	,rbCrashFrame: null
+	,rbFinishFrame: null
 	,update: function(delta) {
 		core_Sprite.prototype.update.call(this,delta);
 		if((this.input & 1) == 1) {
@@ -34174,7 +34210,7 @@ game_objects_Ship.prototype = $extend(core_Sprite.prototype,{
 		if(this.hurtFrame > 0 && Math.floor(this.hurtFrame / 4) % 2 == 0) {
 			this.color = -2533533;
 		} else if(this.flickerFrame > 0 && Math.floor(this.hurtFrame / 4) % 2 == 0) {
-			this.color = -265674;
+			this.color = -2133722;
 		} else {
 			this.color = -1;
 		}
@@ -34564,16 +34600,286 @@ game_scenes_OverScene.prototype = $extend(core_Scene.prototype,{
 	}
 	,__class__: game_scenes_OverScene
 });
+var game_scenes_Star = function(x,y,layer) {
+	core_Sprite.call(this,new core_Vec2(x,y),kha_Assets.images.star,new core_IntVec2(4,4));
+	this.scrollFactor.set(0.125,0.125);
+	if(layer == 0) {
+		this.color = -12632204;
+	} else if(layer == 1) {
+		this.color = Math.random() < 0.5 ? -13606782 : -10785055;
+	} else if(Math.random() < 0.33) {
+		var _g = [];
+		var _g1 = 0;
+		var _g2 = Math.floor(50 + Math.random() * 50);
+		while(_g1 < _g2) {
+			var _ = _g1++;
+			_g.push(0);
+		}
+		var animArray = _g;
+		animArray = animArray.concat([1,2,1]);
+		if(Math.random() < 0.5) {
+			animArray = animArray.concat([1,2,1]);
+		}
+		var _g = [];
+		var _g1 = 0;
+		var _g2 = Math.floor(50 + Math.random() * 50);
+		while(_g1 < _g2) {
+			var _ = _g1++;
+			_g.push(0);
+		}
+		animArray = animArray.concat(_g);
+		this.animation.add("sparkle",animArray,0.1);
+		this.animation.play("sparkle");
+	}
+	this.depth = 1001;
+};
+$hxClasses["game.scenes.Star"] = game_scenes_Star;
+game_scenes_Star.__name__ = "game.scenes.Star";
+game_scenes_Star.__super__ = core_Sprite;
+game_scenes_Star.prototype = $extend(core_Sprite.prototype,{
+	__class__: game_scenes_Star
+});
+var game_scenes_RotatingBar = function(x,y,layer) {
+	core_Sprite.call(this,new core_Vec2(x,y),kha_Assets.images.star,new core_IntVec2(4,4));
+	var width = 2 + core_Util_randomInt(3);
+	var height = 4 + core_Util_randomInt(9);
+	var xVel = -60 + Math.random() * 120;
+	var yVel = -60 + Math.random() * 120;
+	this.color = -9868694;
+	this.rotationalSpeed = -90 + Math.random() * 180;
+	if(layer == 0) {
+		this.scrollFactor.set(0.5,0.5);
+		this.color = -10922414;
+		width = Math.ceil(width / 2);
+		height = Math.ceil(height / 2);
+		this.rotationalSpeed *= 0.5;
+		xVel *= 0.5;
+		yVel *= 0.5;
+	}
+	this.depth = 1001;
+	this.angle = Math.random() * 360;
+	this.makeRect(this.color,new core_IntVec2(width,height));
+	this.physicsEnabled = true;
+	this.body.velocity.set(xVel,yVel);
+};
+$hxClasses["game.scenes.RotatingBar"] = game_scenes_RotatingBar;
+game_scenes_RotatingBar.__name__ = "game.scenes.RotatingBar";
+game_scenes_RotatingBar.__super__ = core_Sprite;
+game_scenes_RotatingBar.prototype = $extend(core_Sprite.prototype,{
+	rotationalSpeed: null
+	,update: function(delta) {
+		core_Sprite.prototype.update.call(this,delta);
+		this.angle += this.rotationalSpeed * delta;
+		if(this.scrollFactor.x == 0) {
+			if(this.body.position.x > 2048) {
+				this.body.position.x -= 2096;
+			} else if(this.body.position.x < -16) {
+				this.body.position.x += 2096;
+			} else if(this.body.position.y > 2048) {
+				this.body.position.y -= 2096;
+			} else if(this.body.position.y < -16) {
+				this.body.position.y += 2096;
+			}
+		} else if(this.body.position.x > 1024) {
+			this.body.position.x -= 1048;
+		} else if(this.body.position.x < -16) {
+			this.body.position.x += 1048;
+		} else if(this.body.position.y > 1024) {
+			this.body.position.y -= 1048;
+		} else if(this.body.position.y < -16) {
+			this.body.position.y += 1048;
+		}
+	}
+	,__class__: game_scenes_RotatingBar
+});
+var game_scenes_ShootingStar = function() {
+	var _gthis = this;
+	core_Sprite.call(this,new core_Vec2(-16,-16),kha_Assets.images.shooting_star,new core_IntVec2(16,16));
+	this.animation.add("shoot",[0,1,2,3,4],0.1,false);
+	this.animation.onComplete = function(anim) {
+		_gthis.stop();
+		_gthis.setTimer();
+	};
+	this.animation.play("shoot");
+	this.depth = 1001;
+};
+$hxClasses["game.scenes.ShootingStar"] = game_scenes_ShootingStar;
+game_scenes_ShootingStar.__name__ = "game.scenes.ShootingStar";
+game_scenes_ShootingStar.__super__ = core_Sprite;
+game_scenes_ShootingStar.prototype = $extend(core_Sprite.prototype,{
+	setTimer: function() {
+		var _gthis = this;
+		this.scene.timers.addTimer(new core_Timer(60 + Math.random() * 60,function() {
+			_gthis.animation.play("shoot");
+			_gthis.setPosition(Math.random() * 2048,Math.random() * 2048);
+			_gthis.start();
+			var tmp = Math.random();
+			_gthis.flipX = tmp < 0.5;
+			var tmp = Math.random();
+			_gthis.flipY = tmp < 0.5;
+		}));
+	}
+	,__class__: game_scenes_ShootingStar
+});
+var game_scenes_PaceScene = function() {
+	this.noiseItems = [];
+	this.time = 0;
+	core_Scene.call(this);
+};
+$hxClasses["game.scenes.PaceScene"] = game_scenes_PaceScene;
+game_scenes_PaceScene.__name__ = "game.scenes.PaceScene";
+game_scenes_PaceScene.__super__ = core_Scene;
+game_scenes_PaceScene.prototype = $extend(core_Scene.prototype,{
+	image: null
+	,mask: null
+	,noise: null
+	,maskId: null
+	,noiseId: null
+	,timeId: null
+	,pipeline: null
+	,oldPipeline: null
+	,time: null
+	,noiseItems: null
+	,create: function() {
+		this.image = kha_Image.createRenderTarget(320,180);
+		var shader = new core_ImageShader(kha_Shaders.pipeline_vert,kha_Shaders.pipeline_frag);
+		this.mask = kha_Image.createRenderTarget(320,180);
+		this.noise = kha_Image.createRenderTarget(320,180);
+		this.timeId = shader.pipeline.getConstantLocation("uTime");
+		this.noiseId = shader.pipeline.getTextureUnit("noise");
+		this.maskId = shader.pipeline.getTextureUnit("mask");
+		this.pipeline = shader.pipeline;
+		this.oldPipeline = this.image.get_g2().get_pipeline();
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),0));
+		}
+		var _g = 0;
+		while(_g < 33) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),1));
+		}
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),2));
+		}
+		this.addSprite(new game_scenes_ShootingStar());
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_RotatingBar(Math.round(Math.random() * 1024),Math.round(Math.random() * 1024),0));
+		}
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_RotatingBar(Math.round(Math.random() * 2048),Math.round(Math.random() * 2048),0));
+		}
+		var item = new core_IntVec2(0,0);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+		var item = new core_IntVec2(-512,0);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+		var item = new core_IntVec2(0,-512);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+		var item = new core_IntVec2(-512,-512);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+	}
+	,update: function(delta) {
+		core_Scene.prototype.update.call(this,delta);
+		this.time += delta;
+		var _g = 0;
+		var _g1 = this.noiseItems;
+		while(_g < _g1.length) {
+			var n = _g1[_g];
+			++_g;
+			n.x++;
+			n.y++;
+			if(n.x == 512) {
+				n.x -= 1024;
+			}
+			if(n.y == 512) {
+				n.y -= 1024;
+			}
+		}
+	}
+	,render: function(g2,g4,clears) {
+		this.image.get_g2().begin(clears,this.camera.bgColor);
+		var _g = 0;
+		var _g1 = this.sprites;
+		while(_g < _g1.length) {
+			var sprite = _g1[_g];
+			++_g;
+			if(sprite.depth > 1000) {
+				sprite.render(this.image.get_g2(),this.camera);
+			}
+		}
+		this.image.get_g2().end();
+		this.mask.get_g2().begin(true,0);
+		var _g = 0;
+		var _g1 = this.sprites;
+		while(_g < _g1.length) {
+			var s = _g1[_g];
+			++_g;
+			if(s.depth == 1000) {
+				s.render(this.mask.get_g2(),this.camera);
+			}
+		}
+		this.mask.get_g2().end();
+		this.noise.get_g2().begin();
+		var _g = 0;
+		var _g1 = this.noiseItems;
+		while(_g < _g1.length) {
+			var n = _g1[_g];
+			++_g;
+			n.render(this.noise.get_g2(),this.camera);
+		}
+		this.noise.get_g2().end();
+		g4.begin();
+		g4.setPipeline(this.pipeline);
+		g4.setTexture(this.maskId,this.mask);
+		g4.setTexture(this.noiseId,this.noise);
+		g4.setFloat(this.timeId,this.time);
+		g4.end();
+		g2.begin();
+		g2.set_pipeline(this.pipeline);
+		g2.drawImage(this.image,0,0);
+		g2.set_pipeline(this.oldPipeline);
+		var _g = 0;
+		var _g1 = this.sprites;
+		while(_g < _g1.length) {
+			var sprite = _g1[_g];
+			++_g;
+			if(sprite.depth < 1000) {
+				sprite.render(this.image.get_g2(),this.camera);
+			}
+		}
+		g2.end();
+	}
+	,__class__: game_scenes_PaceScene
+});
 var game_scenes_RaceScene = function() {
 	this.resultTexts = [];
 	this.pInputs = [];
 	this.state = game_scenes_RaceState.Racing;
-	core_Scene.call(this);
+	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.RaceScene"] = game_scenes_RaceScene;
 game_scenes_RaceScene.__name__ = "game.scenes.RaceScene";
-game_scenes_RaceScene.__super__ = core_Scene;
-game_scenes_RaceScene.prototype = $extend(core_Scene.prototype,{
+game_scenes_RaceScene.__super__ = game_scenes_PaceScene;
+game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 	worldGroup: null
 	,state: null
 	,pInputs: null
@@ -34592,11 +34898,13 @@ game_scenes_RaceScene.prototype = $extend(core_Scene.prototype,{
 	,rollbacksDoneText: null
 	,haltedText: null
 	,create: function() {
+		game_scenes_PaceScene.prototype.create.call(this);
 		var map = kha_Assets.blobs.get(game_data_LevelData_levelData.get(game_data_State.currentLevel).path);
 		var tilemap = new core_TiledMap(map.toString());
 		this.worldGroup = new game_groups_WorldGroup(tilemap,this.minimapSize = new core_IntVec2(48,48),2,$bind(this,this.onCrash),$bind(this,this.onFinish),true);
 		this.worldGroup.frame -= 300;
 		this.addSprite(this.worldGroup);
+		this.addSprite(this.worldGroup.finishBox);
 		this.addSprite(this.timeText = game_ui_UiText_makeOutlineText(316,2,""));
 		this.addSprite(this.countdownText = game_ui_UiText_makeOutlineText(0,60,"",-1,true));
 		this.minimapShip = new core_Sprite(new core_Vec2(-4,-4),kha_Assets.images.mm_ship);
@@ -34619,13 +34927,13 @@ game_scenes_RaceScene.prototype = $extend(core_Scene.prototype,{
 		this.playerIndex = game_conn_Connection.inst.isHost ? 0 : 1;
 		this.rollback = new game_rollback_Rollback(this.playerIndex,this.worldGroup,game_rollback_FrameInput_blankInput(),($_=this.worldGroup,$bind($_,$_.updateWithInputs)),($_=this.worldGroup,$bind($_,$_.unserialize)));
 		game_conn_Connection.inst.addListeners(function() {
-			haxe_Log.trace("Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 95, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 97, className : "game.scenes.RaceScene", methodName : "create"});
 		},function() {
-			haxe_Log.trace("Disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 96, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 98, className : "game.scenes.RaceScene", methodName : "create"});
 		},function() {
-			haxe_Log.trace("Peer Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 97, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Peer Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 99, className : "game.scenes.RaceScene", methodName : "create"});
 		},function(message) {
-			haxe_Log.trace("Peer disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 98, className : "game.scenes.RaceScene", methodName : "create", customParams : [message]});
+			haxe_Log.trace("Peer disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 100, className : "game.scenes.RaceScene", methodName : "create", customParams : [message]});
 		},($_=this.rollback,$bind($_,$_.handleRemoteInput)));
 		this.camera.startFollow(this.worldGroup.ships[this.playerIndex]);
 		var pos = this.worldGroup.ships[this.playerIndex].getMidpoint();
@@ -34669,7 +34977,7 @@ game_scenes_RaceScene.prototype = $extend(core_Scene.prototype,{
 		var scaleX = 2048 / this.minimapSize.x;
 		var scaleY = 2048 / this.minimapSize.y;
 		this.minimapShip.setPosition(320 - this.minimapSize.x - 3 + this.worldGroup.ships[this.playerIndex].x / scaleX,180 - this.minimapSize.y - 3 + this.worldGroup.ships[this.playerIndex].y / scaleY);
-		core_Scene.prototype.update.call(this,delta);
+		game_scenes_PaceScene.prototype.update.call(this,delta);
 		this.rollback.tick(pInput,delta);
 		if(this.game.keys.justPressed(84)) {
 			game_util_Debug.on = !game_util_Debug.on;
@@ -34688,17 +34996,17 @@ game_scenes_RaceScene.prototype = $extend(core_Scene.prototype,{
 		this.haltedText.text = "halted: " + Std.string(this.rollback.isHalted);
 	}
 	,onCrash: function(ship) {
-		haxe_Log.trace("ship crashed",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 184, className : "game.scenes.RaceScene", methodName : "onCrash"});
+		haxe_Log.trace("ship crashed",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 186, className : "game.scenes.RaceScene", methodName : "onCrash"});
 	}
 	,onFinish: function(ship) {
-		haxe_Log.trace("ship finished",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 192, className : "game.scenes.RaceScene", methodName : "onFinish"});
+		haxe_Log.trace("ship finished",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 194, className : "game.scenes.RaceScene", methodName : "onFinish"});
 		var text = (ship == this.worldGroup.ships[this.playerIndex] ? "You" : "Opp") + (": " + game_ui_TextUtil_formatTime(game_groups_WorldGroup_DELTA * ship.finishFrame));
 		var resultSprite = game_ui_UiText_makeOutlineText(0,this.timeText.y + 10 + this.resultTexts.length * 10 | 0,text);
 		resultSprite.x = 316 - resultSprite.textWidth;
 		this.resultTexts.push(resultSprite);
 		this.addSprite(resultSprite);
 		if(ship == this.worldGroup.ships[this.playerIndex]) {
-			haxe_Log.trace(this.pInputs,{ fileName : "game/scenes/RaceScene.hx", lineNumber : 206, className : "game.scenes.RaceScene", methodName : "onFinish"});
+			haxe_Log.trace(this.pInputs,{ fileName : "game/scenes/RaceScene.hx", lineNumber : 208, className : "game.scenes.RaceScene", methodName : "onFinish"});
 		}
 	}
 	,makeStartText: function() {
@@ -34735,12 +35043,12 @@ game_scenes_RaceState.__constructs__ = [game_scenes_RaceState.Idle,game_scenes_R
 var game_scenes_TrialScene = function() {
 	this.pInputs = [];
 	this.state = game_scenes_RaceState.Idle;
-	core_Scene.call(this);
+	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.TrialScene"] = game_scenes_TrialScene;
 game_scenes_TrialScene.__name__ = "game.scenes.TrialScene";
-game_scenes_TrialScene.__super__ = core_Scene;
-game_scenes_TrialScene.prototype = $extend(core_Scene.prototype,{
+game_scenes_TrialScene.__super__ = game_scenes_PaceScene;
+game_scenes_TrialScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 	worldGroup: null
 	,state: null
 	,pInputs: null
@@ -34752,6 +35060,7 @@ game_scenes_TrialScene.prototype = $extend(core_Scene.prototype,{
 	,playerIndex: null
 	,ghostIndex: null
 	,create: function() {
+		game_scenes_PaceScene.prototype.create.call(this);
 		var map = kha_Assets.blobs.get(game_data_LevelData_levelData.get(game_data_State.currentLevel).path);
 		var tilemap = new core_TiledMap(map.toString());
 		if(game_data_State.levelBests.get(game_data_State.currentLevel) != null) {
@@ -34759,6 +35068,7 @@ game_scenes_TrialScene.prototype = $extend(core_Scene.prototype,{
 		}
 		this.worldGroup = new game_groups_WorldGroup(tilemap,this.minimapSize = new core_IntVec2(48,48),this.gInputs != null ? 2 : 1,$bind(this,this.onCrash),$bind(this,this.onFinish),false);
 		this.addSprite(this.worldGroup);
+		this.addSprite(this.worldGroup.finishBox);
 		this.addSprite(this.timeText = game_ui_UiText_makeOutlineText(316,2,"",-1));
 		this.minimapShip = new core_Sprite(new core_Vec2(-4,-4),kha_Assets.images.mm_ship);
 		this.minimapShip.scrollFactor.set(0,0);
@@ -34818,7 +35128,7 @@ game_scenes_TrialScene.prototype = $extend(core_Scene.prototype,{
 		var scaleX = 2048 / this.minimapSize.x;
 		var scaleY = 2048 / this.minimapSize.y;
 		this.minimapShip.setPosition(320 - this.minimapSize.x - 3 + this.worldGroup.ships[this.playerIndex].x / scaleX,180 - this.minimapSize.y - 3 + this.worldGroup.ships[this.playerIndex].y / scaleY);
-		core_Scene.prototype.update.call(this,delta);
+		game_scenes_PaceScene.prototype.update.call(this,delta);
 		if(this.state != game_scenes_RaceState.Idle) {
 			this.worldGroup.updateWithInputs(delta,inputs,this.worldGroup.frame);
 		}
@@ -37940,11 +38250,15 @@ kha__$Assets_AssetData._get = function(this1,key) {
 	return Reflect.getProperty(this1,key);
 };
 var kha__$Assets_ImageList = function() {
-	this.names = ["deco_items","made_with_kha","mm_ship","pointer","ship","ship_32","ship_circle","somepx_04","somepx_04_outline","tiny_slice"];
+	this.names = ["deco_items","made_with_kha","mm_ship","noise1","noise2","pointer","ship","ship_32","ship_circle","shooting_star","somepx_04","somepx_04_outline","star","tiny_slice"];
 	this.tiny_sliceSize = 111;
 	this.tiny_sliceDescription = { name : "tiny_slice", original_height : 4, file_sizes : [111], original_width : 4, files : ["tiny-slice.png"], type : "image"};
 	this.tiny_sliceName = "tiny_slice";
 	this.tiny_slice = null;
+	this.starSize = 102;
+	this.starDescription = { name : "star", original_height : 4, file_sizes : [102], original_width : 12, files : ["star.png"], type : "image"};
+	this.starName = "star";
+	this.star = null;
 	this.somepx_04_outlineSize = 2121;
 	this.somepx_04_outlineDescription = { name : "somepx_04_outline", original_height : 96, file_sizes : [2121], original_width : 208, files : ["somepx-04-outline.png"], type : "image"};
 	this.somepx_04_outlineName = "somepx_04_outline";
@@ -37953,6 +38267,10 @@ var kha__$Assets_ImageList = function() {
 	this.somepx_04Description = { name : "somepx_04", original_height : 96, file_sizes : [1208], original_width : 208, files : ["somepx-04.png"], type : "image"};
 	this.somepx_04Name = "somepx_04";
 	this.somepx_04 = null;
+	this.shooting_starSize = 173;
+	this.shooting_starDescription = { name : "shooting_star", original_height : 16, file_sizes : [173], original_width : 80, files : ["shooting-star.png"], type : "image"};
+	this.shooting_starName = "shooting_star";
+	this.shooting_star = null;
 	this.ship_circleSize = 764;
 	this.ship_circleDescription = { name : "ship_circle", original_height : 16, file_sizes : [764], original_width : 288, files : ["ship-circle.png"], type : "image"};
 	this.ship_circleName = "ship_circle";
@@ -37969,6 +38287,14 @@ var kha__$Assets_ImageList = function() {
 	this.pointerDescription = { name : "pointer", original_height : 8, file_sizes : [143], original_width : 24, files : ["pointer.png"], type : "image"};
 	this.pointerName = "pointer";
 	this.pointer = null;
+	this.noise2Size = 103999;
+	this.noise2Description = { name : "noise2", original_height : 512, file_sizes : [103999], original_width : 512, files : ["noise2.png"], type : "image"};
+	this.noise2Name = "noise2";
+	this.noise2 = null;
+	this.noise1Size = 26481;
+	this.noise1Description = { name : "noise1", original_height : 256, file_sizes : [26481], original_width : 256, files : ["noise1.png"], type : "image"};
+	this.noise1Name = "noise1";
+	this.noise1 = null;
 	this.mm_shipSize = 100;
 	this.mm_shipDescription = { name : "mm_ship", original_height : 4, file_sizes : [100], original_width : 4, files : ["mm-ship.png"], type : "image"};
 	this.mm_shipName = "mm_ship";
@@ -37977,8 +38303,8 @@ var kha__$Assets_ImageList = function() {
 	this.made_with_khaDescription = { name : "made_with_kha", original_height : 32, file_sizes : [785], original_width : 32, files : ["made-with-kha.png"], type : "image"};
 	this.made_with_khaName = "made_with_kha";
 	this.made_with_kha = null;
-	this.deco_itemsSize = 273;
-	this.deco_itemsDescription = { name : "deco_items", original_height : 16, file_sizes : [273], original_width : 16, files : ["deco-items.png"], type : "image"};
+	this.deco_itemsSize = 247;
+	this.deco_itemsDescription = { name : "deco_items", original_height : 16, file_sizes : [247], original_width : 16, files : ["deco-items.png"], type : "image"};
 	this.deco_itemsName = "deco_items";
 	this.deco_items = null;
 };
@@ -38026,6 +38352,32 @@ kha__$Assets_ImageList.prototype = {
 	,mm_shipUnload: function() {
 		this.mm_ship.unload();
 		this.mm_ship = null;
+	}
+	,noise1: null
+	,noise1Name: null
+	,noise1Description: null
+	,noise1Size: null
+	,noise1Load: function(done,failure) {
+		kha_Assets.loadImage("noise1",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "noise1Load"});
+	}
+	,noise1Unload: function() {
+		this.noise1.unload();
+		this.noise1 = null;
+	}
+	,noise2: null
+	,noise2Name: null
+	,noise2Description: null
+	,noise2Size: null
+	,noise2Load: function(done,failure) {
+		kha_Assets.loadImage("noise2",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "noise2Load"});
+	}
+	,noise2Unload: function() {
+		this.noise2.unload();
+		this.noise2 = null;
 	}
 	,pointer: null
 	,pointerName: null
@@ -38079,6 +38431,19 @@ kha__$Assets_ImageList.prototype = {
 		this.ship_circle.unload();
 		this.ship_circle = null;
 	}
+	,shooting_star: null
+	,shooting_starName: null
+	,shooting_starDescription: null
+	,shooting_starSize: null
+	,shooting_starLoad: function(done,failure) {
+		kha_Assets.loadImage("shooting_star",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "shooting_starLoad"});
+	}
+	,shooting_starUnload: function() {
+		this.shooting_star.unload();
+		this.shooting_star = null;
+	}
 	,somepx_04: null
 	,somepx_04Name: null
 	,somepx_04Description: null
@@ -38104,6 +38469,19 @@ kha__$Assets_ImageList.prototype = {
 	,somepx_04_outlineUnload: function() {
 		this.somepx_04_outline.unload();
 		this.somepx_04_outline = null;
+	}
+	,star: null
+	,starName: null
+	,starDescription: null
+	,starSize: null
+	,starLoad: function(done,failure) {
+		kha_Assets.loadImage("star",function(image) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 142, className : "kha._Assets.ImageList", methodName : "starLoad"});
+	}
+	,starUnload: function() {
+		this.star.unload();
+		this.star = null;
 	}
 	,tiny_slice: null
 	,tiny_sliceName: null
@@ -38135,32 +38513,32 @@ kha__$Assets_SoundList.prototype = {
 };
 var kha__$Assets_BlobList = function() {
 	this.names = ["arc_up_tmx","diamond_me_tmx","hard_right_tmx","index_html","meet_in_the_middle_tmx","out_n_back_tmx","spiral_tmx"];
-	this.spiral_tmxSize = 4224;
-	this.spiral_tmxDescription = { name : "spiral_tmx", file_sizes : [4224], files : ["spiral.tmx"], type : "blob"};
+	this.spiral_tmxSize = 6335;
+	this.spiral_tmxDescription = { name : "spiral_tmx", file_sizes : [6335], files : ["spiral.tmx"], type : "blob"};
 	this.spiral_tmxName = "spiral_tmx";
 	this.spiral_tmx = null;
-	this.out_n_back_tmxSize = 1845;
-	this.out_n_back_tmxDescription = { name : "out_n_back_tmx", file_sizes : [1845], files : ["out-n-back.tmx"], type : "blob"};
+	this.out_n_back_tmxSize = 2439;
+	this.out_n_back_tmxDescription = { name : "out_n_back_tmx", file_sizes : [2439], files : ["out-n-back.tmx"], type : "blob"};
 	this.out_n_back_tmxName = "out_n_back_tmx";
 	this.out_n_back_tmx = null;
-	this.meet_in_the_middle_tmxSize = 1389;
-	this.meet_in_the_middle_tmxDescription = { name : "meet_in_the_middle_tmx", file_sizes : [1389], files : ["meet-in-the-middle.tmx"], type : "blob"};
+	this.meet_in_the_middle_tmxSize = 1794;
+	this.meet_in_the_middle_tmxDescription = { name : "meet_in_the_middle_tmx", file_sizes : [1794], files : ["meet-in-the-middle.tmx"], type : "blob"};
 	this.meet_in_the_middle_tmxName = "meet_in_the_middle_tmx";
 	this.meet_in_the_middle_tmx = null;
 	this.index_htmlSize = 559;
 	this.index_htmlDescription = { name : "index_html", file_sizes : [559], files : ["index.html"], type : "blob"};
 	this.index_htmlName = "index_html";
 	this.index_html = null;
-	this.hard_right_tmxSize = 1082;
-	this.hard_right_tmxDescription = { name : "hard_right_tmx", file_sizes : [1082], files : ["hard-right.tmx"], type : "blob"};
+	this.hard_right_tmxSize = 1497;
+	this.hard_right_tmxDescription = { name : "hard_right_tmx", file_sizes : [1497], files : ["hard-right.tmx"], type : "blob"};
 	this.hard_right_tmxName = "hard_right_tmx";
 	this.hard_right_tmx = null;
-	this.diamond_me_tmxSize = 1957;
-	this.diamond_me_tmxDescription = { name : "diamond_me_tmx", file_sizes : [1957], files : ["diamond-me.tmx"], type : "blob"};
+	this.diamond_me_tmxSize = 3277;
+	this.diamond_me_tmxDescription = { name : "diamond_me_tmx", file_sizes : [3277], files : ["diamond-me.tmx"], type : "blob"};
 	this.diamond_me_tmxName = "diamond_me_tmx";
 	this.diamond_me_tmx = null;
-	this.arc_up_tmxSize = 1341;
-	this.arc_up_tmxDescription = { name : "arc_up_tmx", file_sizes : [1341], files : ["arc-up.tmx"], type : "blob"};
+	this.arc_up_tmxSize = 2020;
+	this.arc_up_tmxDescription = { name : "arc_up_tmx", file_sizes : [2020], files : ["arc-up.tmx"], type : "blob"};
 	this.arc_up_tmxName = "arc_up_tmx";
 	this.arc_up_tmx = null;
 };
@@ -40484,6 +40862,28 @@ kha_Shaders.init = function() {
 	var bytes = haxe_Unserializer.run(data);
 	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
 	kha_Shaders.painter_video_vert = new kha_graphics4_VertexShader(blobs,["painter-video.vert.essl","painter-video-webgl2.vert.essl","painter-video-relaxed.vert.essl"]);
+	var blobs = [];
+	var data = Reflect.field(kha_Shaders,"pipeline_fragData" + 0);
+	var bytes = haxe_Unserializer.run(data);
+	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
+	var data = Reflect.field(kha_Shaders,"pipeline_fragData" + 1);
+	var bytes = haxe_Unserializer.run(data);
+	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
+	var data = Reflect.field(kha_Shaders,"pipeline_fragData" + 2);
+	var bytes = haxe_Unserializer.run(data);
+	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
+	kha_Shaders.pipeline_frag = new kha_graphics4_FragmentShader(blobs,["pipeline.frag.essl","pipeline-webgl2.frag.essl","pipeline-relaxed.frag.essl"]);
+	var blobs = [];
+	var data = Reflect.field(kha_Shaders,"pipeline_vertData" + 0);
+	var bytes = haxe_Unserializer.run(data);
+	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
+	var data = Reflect.field(kha_Shaders,"pipeline_vertData" + 1);
+	var bytes = haxe_Unserializer.run(data);
+	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
+	var data = Reflect.field(kha_Shaders,"pipeline_vertData" + 2);
+	var bytes = haxe_Unserializer.run(data);
+	blobs.push(kha_internal_BytesBlob.fromBytes(bytes));
+	kha_Shaders.pipeline_vert = new kha_graphics4_VertexShader(blobs,["pipeline.vert.essl","pipeline-webgl2.vert.essl","pipeline-relaxed.vert.essl"]);
 };
 var kha_Sound = function() {
 	this.sampleRate = 0;
@@ -68377,7 +68777,7 @@ echo_util_AABB.pool = new echo_util_GenericPool_$echo_$util_$AABB(echo_util_AABB
 echo_util_QuadTree.pool = new echo_util_GenericPool_$echo_$util_$QuadTree(echo_util_QuadTree);
 echo_util_SAT.norm = new echo_math_Vector2Default(0,0);
 echo_util_SAT.closest = new echo_math_Vector2Default(0,0);
-game_conn_Conn.WS_URL = "wss://pacepd25-e2ef41da108c.herokuapp.com/";
+game_conn_Conn.WS_URL = "ws://localhost:6969";
 var game_conn_Connection_PING_ITEMS = 40;
 var game_conn_Connection_PING_INTERVAL = 250;
 var game_data_LevelData_levelOrder = [game_data_Level.ArcUp,game_data_Level.HardRight,game_data_Level.OutNBack,game_data_Level.Spiral];
@@ -68405,8 +68805,14 @@ game_scenes_RaceScene.DELAY_START = 300;
 game_ui_Colors.LIGHT_RED = -2533533;
 game_ui_Colors.DARK_RED = -5492174;
 game_ui_Colors.YELLOW = -265674;
+game_ui_Colors.ORANGE = -2133722;
 game_ui_Colors.WHITE = -1;
 game_ui_Colors.OFF_WHITE = -3417092;
+game_ui_Colors.DARK_BLUE = -12632204;
+game_ui_Colors.MID_BLUE1 = -13606782;
+game_ui_Colors.MID_BLUE2 = -10785055;
+game_ui_Colors.DARK_GREY = -10922414;
+game_ui_Colors.GREY = -9868694;
 game_ui_UiText.font = game_ui_UiText_getFont();
 game_ui_UiText.outlineFont = game_ui_UiText_getOutlineFont();
 game_util_Debug.on = false;
@@ -68477,6 +68883,12 @@ kha_Shaders.painter_video_fragData2 = "s444:I3ZlcnNpb24gMTAwCnByZWNpc2lvbiBtZWRp
 kha_Shaders.painter_video_vertData0 = "s407:I3ZlcnNpb24gMTAwCgp1bmlmb3JtIG1hdDQgcHJvamVjdGlvbk1hdHJpeDsKCmF0dHJpYnV0ZSB2ZWMzIHZlcnRleFBvc2l0aW9uOwp2YXJ5aW5nIHZlYzIgdGV4Q29vcmQ7CmF0dHJpYnV0ZSB2ZWMyIHZlcnRleFVWOwp2YXJ5aW5nIHZlYzQgY29sb3I7CmF0dHJpYnV0ZSB2ZWM0IHZlcnRleENvbG9yOwoKdm9pZCBtYWluKCkKewogICAgZ2xfUG9zaXRpb24gPSBwcm9qZWN0aW9uTWF0cml4ICogdmVjNCh2ZXJ0ZXhQb3NpdGlvbiwgMS4wKTsKICAgIHRleENvb3JkID0gdmVydGV4VVY7CiAgICBjb2xvciA9IHZlcnRleENvbG9yOwp9Cgo";
 kha_Shaders.painter_video_vertData1 = "s372:I3ZlcnNpb24gMzAwIGVzCgp1bmlmb3JtIG1hdDQgcHJvamVjdGlvbk1hdHJpeDsKCmluIHZlYzMgdmVydGV4UG9zaXRpb247Cm91dCB2ZWMyIHRleENvb3JkOwppbiB2ZWMyIHZlcnRleFVWOwpvdXQgdmVjNCBjb2xvcjsKaW4gdmVjNCB2ZXJ0ZXhDb2xvcjsKCnZvaWQgbWFpbigpCnsKICAgIGdsX1Bvc2l0aW9uID0gcHJvamVjdGlvbk1hdHJpeCAqIHZlYzQodmVydGV4UG9zaXRpb24sIDEuMCk7CiAgICB0ZXhDb29yZCA9IHZlcnRleFVWOwogICAgY29sb3IgPSB2ZXJ0ZXhDb2xvcjsKfQoK";
 kha_Shaders.painter_video_vertData2 = "s471:I3ZlcnNpb24gMTAwCgp1bmlmb3JtIG1lZGl1bXAgbWF0NCBwcm9qZWN0aW9uTWF0cml4OwoKYXR0cmlidXRlIG1lZGl1bXAgdmVjMyB2ZXJ0ZXhQb3NpdGlvbjsKdmFyeWluZyBtZWRpdW1wIHZlYzIgdGV4Q29vcmQ7CmF0dHJpYnV0ZSBtZWRpdW1wIHZlYzIgdmVydGV4VVY7CnZhcnlpbmcgbWVkaXVtcCB2ZWM0IGNvbG9yOwphdHRyaWJ1dGUgbWVkaXVtcCB2ZWM0IHZlcnRleENvbG9yOwoKdm9pZCBtYWluKCkKewogICAgZ2xfUG9zaXRpb24gPSBwcm9qZWN0aW9uTWF0cml4ICogdmVjNCh2ZXJ0ZXhQb3NpdGlvbiwgMS4wKTsKICAgIHRleENvb3JkID0gdmVydGV4VVY7CiAgICBjb2xvciA9IHZlcnRleENvbG9yOwp9Cgo";
+kha_Shaders.pipeline_fragData0 = "s7140:I3ZlcnNpb24gMTAwCnByZWNpc2lvbiBtZWRpdW1wIGZsb2F0OwpwcmVjaXNpb24gaGlnaHAgaW50OwoKdW5pZm9ybSBoaWdocCBzYW1wbGVyMkQgbWFzazsKdW5pZm9ybSBoaWdocCBzYW1wbGVyMkQgdGV4Owp1bmlmb3JtIGhpZ2hwIHNhbXBsZXIyRCBfbm9pc2U7Cgp2YXJ5aW5nIGhpZ2hwIHZlYzIgdGV4Q29vcmQ7CnZhcnlpbmcgaGlnaHAgZmxvYXQgdGltZTsKdmFyeWluZyBoaWdocCB2ZWM0IGNvbG9yOwpoaWdocCBmbG9hdCBtaW5EaXN0OwpoaWdocCB2ZWM0IGNvbG9yc1szMl07CmhpZ2hwIHZlYzQgc2VsZWN0ZWQ7Cgp2b2lkIG1haW4oKQp7CiAgICBtaW5EaXN0ID0gMy4wOwogICAgaGlnaHAgdmVjNCBtYXNrY29sb3IgPSB0ZXh0dXJlMkQobWFzaywgdGV4Q29vcmQpOwogICAgaGlnaHAgdmVjMiBjb29yZCA9IHRleENvb3JkOwogICAgaWYgKG1hc2tjb2xvci53ID09IDEuMCkKICAgIHsKICAgICAgICBjb29yZC54ICs9ICgoKDIuMCAqIHNpbigodGV4Q29vcmQueSAqIHRpbWUpICogMy4wKSkgKiAxLjApIC8gMzIwLjApOwogICAgfQogICAgaGlnaHAgdmVjNCB0ZXhjb2xvciA9IHRleHR1cmUyRCh0ZXgsIGNvb3JkKTsKICAgIGhpZ2hwIHZlYzQgbm9pc2Vjb2xvciA9IHRleHR1cmUyRChfbm9pc2UsIHRleENvb3JkKTsKICAgIGlmIChtYXNrY29sb3IudyA9PSAxLjApCiAgICB7CiAgICAgICAgaGlnaHAgdmVjMyBfODAgPSBjbGFtcCh0ZXhjb2xvci54eXogKiBtYXNrY29sb3IudywgdmVjMygwLjEwMDAwMDAwMTQ5MDExNjExOTM4NDc2NTYyNSksIHZlYzMoMC44OTk5OTk5NzYxNTgxNDIwODk4NDM3NSkpOwogICAgICAgIHRleGNvbG9yID0gdmVjNChfODAueCwgXzgwLnksIF84MC56LCB0ZXhjb2xvci53KTsKICAgIH0KICAgIGNvbG9yc1swXSA9IHZlYzQoMC4wLCAwLjAsIDAuMCwgMS4wKTsKICAgIGNvbG9yc1sxXSA9IHZlYzQoMC4xMzMzMzMzNDAyODcyMDg1NTcxMjg5MDYyNSwgMC4xMjU0OTAyMDM0OTk3OTQwMDYzNDc2NTYyNSwgMC4yMDM5MjE1NzEzNzM5Mzk1MTQxNjAxNTYyNSwgMS4wKTsKICAgIGNvbG9yc1syXSA9IHZlYzQoMC4xOTYwNzg0MzQ1ODY1MjQ5NjMzNzg5MDYyNSwgMC4yMzUyOTQxMTg1MjM1OTc3MTcyODUxNTYyNSwgMC4yMjM1Mjk0MTMzNDI0NzU4OTExMTMyODEyNSwgMS4wKTsKICAgIGNvbG9yc1szXSA9IHZlYzQoMC4yNzA1ODgyNDg5NjgxMjQzODk2NDg0Mzc1LCAwLjE1Njg2Mjc1MDY0OTQ1MjIwOTQ3MjY1NjI1LCAwLjIzNTI5NDExODUyMzU5NzcxNzI4NTE1NjI1LCAxLjApOwogICAgY29sb3JzWzRdID0gdmVjNCgwLjMyMTU2ODYzODA4NjMxODk2OTcyNjU2MjUsIDAuMjk0MTE3NjU5MzMwMzY4MDQxOTkyMTg3NSwgMC4xNDExNzY0NzcwNzQ2MjMxMDc5MTAxNTYyNSwgMS4wKTsKICAgIGNvbG9yc1s1XSA9IHZlYzQoMC40MDAwMDAwMDU5NjA0NjQ0Nzc1MzkwNjI1LCAwLjIyMzUyOTQxMzM0MjQ3NTg5MTExMzI4MTI1LCAwLjE5MjE1Njg2NjE5MjgxNzY4Nzk4ODI4MTI1LCAxLjApOwogICAgY29sb3JzWzZdID0gdmVjNCgwLjI5NDExNzY1OTMzMDM2ODA0MTk5MjE4NzUsIDAuNDExNzY0NzExMTQxNTg2MzAzNzEwOTM3NSwgMC4xODQzMTM3Mjk0MDU0MDMxMzcyMDcwMzEyNSwgMS4wKTsKICAgIGNvbG9yc1s3XSA9IHZlYzQoMC4yNDcwNTg4MjM3MDQ3MTk1NDM0NTcwMzEyNSwgMC4yNDcwNTg4MjM3MDQ3MTk1NDM0NTcwMzEyNSwgMC40NTQ5MDE5NjM0NzIzNjYzMzMwMDc4MTI1LCAxLjApOwogICAgY29sb3JzWzhdID0gdmVjNCgwLjM0OTAxOTYxNjg0MjI2OTg5NzQ2MDkzNzUsIDAuMzM3MjU0OTExNjYxMTQ4MDcxMjg5MDYyNSwgMC4zMjE1Njg2MzgwODYzMTg5Njk3MjY1NjI1LCAxLjApOwogICAgY29sb3JzWzldID0gdmVjNCgwLjY3NDUwOTgyMzMyMjI5NjE0MjU3ODEyNSwgMC4xOTYwNzg0MzQ1ODY1MjQ5NjMzNzg5MDYyNSwgMC4xOTYwNzg0MzQ1ODY1MjQ5NjMzNzg5MDYyNSwgMS4wKTsKICAgIGNvbG9yc1sxMF0gPSB2ZWM0KDAuMTg4MjM1Mjk3Nzk5MTEwNDEyNTk3NjU2MjUsIDAuMzc2NDcwNTk1NTk4MjIwODI1MTk1MzEyNSwgMC41MDk4MDM5NTA3ODY1OTA1NzYxNzE4NzUsIDEuMCk7CiAgICBjb2xvcnNbMTFdID0gdmVjNCgwLjU2MDc4NDMzOTkwNDc4NTE1NjI1LCAwLjMzNzI1NDkxMTY2MTE0ODA3MTI4OTA2MjUsIDAuMjMxMzcyNTUwMTI5ODkwNDQxODk0NTMxMjUsIDEuMCk7CiAgICBjb2xvcnNbMTJdID0gdmVjNCgwLjU0MTE3NjQ5NzkzNjI0ODc3OTI5Njg3NSwgMC40MzUyOTQxMjE1MDM4Mjk5NTYwNTQ2ODc1LCAwLjE4ODIzNTI5Nzc5OTExMDQxMjU5NzY1NjI1LCAxLjApOwogICAgY29sb3JzWzEzXSA9IHZlYzQoMC4yMTU2ODYyNzY1NTUwNjEzNDAzMzIwMzEyNSwgMC41ODAzOTIxODE4NzMzMjE1MzMyMDMxMjUsIDAuNDMxMzcyNTUzMTEwMTIyNjgwNjY0MDYyNSwgMS4wKTsKICAgIGNvbG9yc1sxNF0gPSB2ZWM0KDAuNDExNzY0NzExMTQxNTg2MzAzNzEwOTM3NSwgMC40MTU2ODYyNzk1MzUyOTM1NzkxMDE1NjI1LCAwLjQxNTY4NjI3OTUzNTI5MzU3OTEwMTU2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTVdID0gdmVjNCgwLjQ2Mjc0NTEwMDI1OTc4MDg4Mzc4OTA2MjUsIDAuMjU4ODIzNTQzNzg3MDAyNTYzNDc2NTYyNSwgMC41NDExNzY0OTc5MzYyNDg3NzkyOTY4NzUsIDEuMCk7CiAgICBjb2xvcnNbMTZdID0gdmVjNCgwLjQxNTY4NjI3OTUzNTI5MzU3OTEwMTU2MjUsIDAuNzQ1MDk4MDU0NDA5MDI3MDk5NjA5Mzc1LCAwLjE4ODIzNTI5Nzc5OTExMDQxMjU5NzY1NjI1LCAxLjApOwogICAgY29sb3JzWzE3XSA9IHZlYzQoMC41NjA3ODQzMzk5MDQ3ODUxNTYyNSwgMC41OTIxNTY4ODcwNTQ0NDMzNTkzNzUsIDAuMjkwMTk2MDkwOTM2NjYwNzY2NjAxNTYyNSwgMS4wKTsKICAgIGNvbG9yc1sxOF0gPSB2ZWM0KDAuODc0NTA5ODExNDAxMzY3MTg3NSwgMC40NDMxMzcyNTgyOTEyNDQ1MDY4MzU5Mzc1LCAwLjE0OTAxOTYxMzg2MjAzNzY1ODY5MTQwNjI1LCAxLjApOwogICAgY29sb3JzWzE5XSA9IHZlYzQoMC41MTc2NDcwODc1NzQwMDUxMjY5NTMxMjUsIDAuNDk0MTE3NjQ3NDA5NDM5MDg2OTE0MDYyNSwgMC41Mjk0MTE3OTI3NTUxMjY5NTMxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjBdID0gdmVjNCgwLjg1MDk4MDQwMTAzOTEyMzUzNTE1NjI1LCAwLjM0MTE3NjQ4MDA1NDg1NTM0NjY3OTY4NzUsIDAuMzg4MjM1MzAwNzc5MzQyNjUxMzY3MTg3NSwgMS4wKTsKICAgIGNvbG9yc1syMV0gPSB2ZWM0KDAuMzU2ODYyNzUzNjI5Njg0NDQ4MjQyMTg3NSwgMC40MzEzNzI1NTMxMTAxMjI2ODA2NjQwNjI1LCAwLjg4MjM1Mjk0ODE4ODc4MTczODI4MTI1LCAxLjApOwogICAgY29sb3JzWzIyXSA9IHZlYzQoMC42MDAwMDAwMjM4NDE4NTc5MTAxNTYyNSwgMC44OTgwMzkyMjE3NjM2MTA4Mzk4NDM3NSwgMC4zMTM3MjU1MDEyOTg5MDQ0MTg5NDUzMTI1LCAxLjApOwogICAgY29sb3JzWzIzXSA9IHZlYzQoMC44NTA5ODA0MDEwMzkxMjM1MzUxNTYyNSwgMC42Mjc0NTEwMDI1OTc4MDg4Mzc4OTA2MjUsIDAuNDAwMDAwMDA1OTYwNDY0NDc3NTM5MDYyNSwgMS4wKTsKICAgIGNvbG9yc1syNF0gPSB2ZWM0KDAuMzg4MjM1MzAwNzc5MzQyNjUxMzY3MTg3NSwgMC42MDc4NDMxNjA2MjkyNzI0NjA5Mzc1LCAxLjAsIDEuMCk7CiAgICBjb2xvcnNbMjVdID0gdmVjNCgwLjYwNzg0MzE2MDYyOTI3MjQ2MDkzNzUsIDAuNjc4NDMxMzkxNzE2MDAzNDE3OTY4NzUsIDAuNzE3NjQ3MDc1NjUzMDc2MTcxODc1LCAxLjApOwogICAgY29sb3JzWzI2XSA9IHZlYzQoMC44NDMxMzcyNjQyNTE3MDg5ODQzNzUsIDAuNDgyMzUyOTQyMjI4MzE3MjYwNzQyMTg3NSwgMC43Mjk0MTE3ODA4MzQxOTc5OTgwNDY4NzUsIDEuMCk7CiAgICBjb2xvcnNbMjddID0gdmVjNCgwLjM3MjU0OTAyNzIwNDUxMzU0OTgwNDY4NzUsIDAuODAzOTIxNTgwMzE0NjM2MjMwNDY4NzUsIDAuODk0MTE3NjUzMzY5OTAzNTY0NDUzMTI1LCAxLjApOwogICAgY29sb3JzWzI4XSA9IHZlYzQoMC45ODQzMTM3MjY0MjUxNzA4OTg0Mzc1LCAwLjk0OTAxOTYxMDg4MTgwNTQxOTkyMTg3NSwgMC4yMTE3NjQ3MDgxNjEzNTQwNjQ5NDE0MDYyNSwgMS4wKTsKICAgIGNvbG9yc1syOV0gPSB2ZWM0KDAuOTMzMzMzMzM3MzA2OTc2MzE4MzU5Mzc1LCAwLjc2NDcwNTg5NjM3NzU2MzQ3NjU2MjUsIDAuNjAzOTIxNTkyMjM1NTY1MTg1NTQ2ODc1LCAxLjApOwogICAgY29sb3JzWzMwXSA9IHZlYzQoMC43OTYwNzg0NDM1MjcyMjE2Nzk2ODc1LCAwLjg1ODgyMzUzNzgyNjUzODA4NTkzNzUsIDAuOTg4MjM1Mjk0ODE4ODc4MTczODI4MTI1LCAxLjApOwogICAgY29sb3JzWzMxXSA9IHZlYzQoMS4wKTsKICAgIGZvciAoaW50IGkgPSAwOyBpIDwgMzI7IGkrKykKICAgIHsKICAgICAgICBoaWdocCBmbG9hdCBkaXN0ID0gKHBvdyhhYnModGV4Y29sb3IueCAtIGNvbG9yc1tpXS54KSwgMi4wKSArIHBvdyhhYnModGV4Y29sb3IueSAtIGNvbG9yc1tpXS55KSwgMi4wKSkgKyBwb3coYWJzKHRleGNvbG9yLnogLSBjb2xvcnNbaV0ueiksIDIuMCk7CiAgICAgICAgaWYgKGRpc3QgPCBtaW5EaXN0KQogICAgICAgIHsKICAgICAgICAgICAgbWluRGlzdCA9IGRpc3Q7CiAgICAgICAgICAgIHNlbGVjdGVkID0gY29sb3JzW2ldOwogICAgICAgIH0KICAgIH0KICAgIGJvb2wgXzMxMyA9IG5vaXNlY29sb3IueCA8ICgwLjI3MDAwMDAxMDcyODgzNjA1OTU3MDMxMjUgKyAoc2luKHRpbWUpICogMC4wNzAwMDAwMDAyOTgwMjMyMjM4NzY5NTMxMjUpKTsKICAgIGJvb2wgXzMyMDsKICAgIGlmIChfMzEzKQogICAgewogICAgICAgIF8zMjAgPSBzZWxlY3RlZC54IDwgMC44MDAwMDAwMTE5MjA5Mjg5NTUwNzgxMjU7CiAgICB9CiAgICBlbHNlCiAgICB7CiAgICAgICAgXzMyMCA9IF8zMTM7CiAgICB9CiAgICBib29sIF8zMjY7CiAgICBpZiAoXzMyMCkKICAgIHsKICAgICAgICBfMzI2ID0gc2VsZWN0ZWQueSA8IDAuODAwMDAwMDExOTIwOTI4OTU1MDc4MTI1OwogICAgfQogICAgZWxzZQogICAgewogICAgICAgIF8zMjYgPSBfMzIwOwogICAgfQogICAgYm9vbCBfMzMyOwogICAgaWYgKF8zMjYpCiAgICB7CiAgICAgICAgXzMzMiA9IHNlbGVjdGVkLnogPCAwLjgwMDAwMDAxMTkyMDkyODk1NTA3ODEyNTsKICAgIH0KICAgIGVsc2UKICAgIHsKICAgICAgICBfMzMyID0gXzMyNjsKICAgIH0KICAgIGlmIChfMzMyKQogICAgewogICAgICAgIGhpZ2hwIHZlYzMgXzM0MCA9IGNsYW1wKHNlbGVjdGVkLnh5eiAqIDAuODAwMDAwMDExOTIwOTI4OTU1MDc4MTI1LCB2ZWMzKDAuMCksIHZlYzMoMS4wKSk7CiAgICAgICAgc2VsZWN0ZWQgPSB2ZWM0KF8zNDAueCwgXzM0MC55LCBfMzQwLnosIHNlbGVjdGVkLncpOwogICAgfQogICAgZ2xfRnJhZ0RhdGFbMF0gPSBzZWxlY3RlZDsKfQoK";
+kha_Shaders.pipeline_fragData1 = "s7144:I3ZlcnNpb24gMzAwIGVzCnByZWNpc2lvbiBtZWRpdW1wIGZsb2F0OwpwcmVjaXNpb24gaGlnaHAgaW50OwoKdW5pZm9ybSBoaWdocCBzYW1wbGVyMkQgbWFzazsKdW5pZm9ybSBoaWdocCBzYW1wbGVyMkQgdGV4Owp1bmlmb3JtIGhpZ2hwIHNhbXBsZXIyRCBfbm9pc2U7CgppbiBoaWdocCB2ZWMyIHRleENvb3JkOwppbiBoaWdocCBmbG9hdCB0aW1lOwpvdXQgaGlnaHAgdmVjNCBGcmFnQ29sb3I7CmluIGhpZ2hwIHZlYzQgY29sb3I7CmhpZ2hwIGZsb2F0IG1pbkRpc3Q7CmhpZ2hwIHZlYzQgY29sb3JzWzMyXTsKaGlnaHAgdmVjNCBzZWxlY3RlZDsKCnZvaWQgbWFpbigpCnsKICAgIG1pbkRpc3QgPSAzLjA7CiAgICBoaWdocCB2ZWM0IG1hc2tjb2xvciA9IHRleHR1cmUobWFzaywgdGV4Q29vcmQpOwogICAgaGlnaHAgdmVjMiBjb29yZCA9IHRleENvb3JkOwogICAgaWYgKG1hc2tjb2xvci53ID09IDEuMCkKICAgIHsKICAgICAgICBjb29yZC54ICs9ICgoKDIuMCAqIHNpbigodGV4Q29vcmQueSAqIHRpbWUpICogMy4wKSkgKiAxLjApIC8gMzIwLjApOwogICAgfQogICAgaGlnaHAgdmVjNCB0ZXhjb2xvciA9IHRleHR1cmUodGV4LCBjb29yZCk7CiAgICBoaWdocCB2ZWM0IG5vaXNlY29sb3IgPSB0ZXh0dXJlKF9ub2lzZSwgdGV4Q29vcmQpOwogICAgaWYgKG1hc2tjb2xvci53ID09IDEuMCkKICAgIHsKICAgICAgICBoaWdocCB2ZWMzIF84MCA9IGNsYW1wKHRleGNvbG9yLnh5eiAqIG1hc2tjb2xvci53LCB2ZWMzKDAuMTAwMDAwMDAxNDkwMTE2MTE5Mzg0NzY1NjI1KSwgdmVjMygwLjg5OTk5OTk3NjE1ODE0MjA4OTg0Mzc1KSk7CiAgICAgICAgdGV4Y29sb3IgPSB2ZWM0KF84MC54LCBfODAueSwgXzgwLnosIHRleGNvbG9yLncpOwogICAgfQogICAgY29sb3JzWzBdID0gdmVjNCgwLjAsIDAuMCwgMC4wLCAxLjApOwogICAgY29sb3JzWzFdID0gdmVjNCgwLjEzMzMzMzM0MDI4NzIwODU1NzEyODkwNjI1LCAwLjEyNTQ5MDIwMzQ5OTc5NDAwNjM0NzY1NjI1LCAwLjIwMzkyMTU3MTM3MzkzOTUxNDE2MDE1NjI1LCAxLjApOwogICAgY29sb3JzWzJdID0gdmVjNCgwLjE5NjA3ODQzNDU4NjUyNDk2MzM3ODkwNjI1LCAwLjIzNTI5NDExODUyMzU5NzcxNzI4NTE1NjI1LCAwLjIyMzUyOTQxMzM0MjQ3NTg5MTExMzI4MTI1LCAxLjApOwogICAgY29sb3JzWzNdID0gdmVjNCgwLjI3MDU4ODI0ODk2ODEyNDM4OTY0ODQzNzUsIDAuMTU2ODYyNzUwNjQ5NDUyMjA5NDcyNjU2MjUsIDAuMjM1Mjk0MTE4NTIzNTk3NzE3Mjg1MTU2MjUsIDEuMCk7CiAgICBjb2xvcnNbNF0gPSB2ZWM0KDAuMzIxNTY4NjM4MDg2MzE4OTY5NzI2NTYyNSwgMC4yOTQxMTc2NTkzMzAzNjgwNDE5OTIxODc1LCAwLjE0MTE3NjQ3NzA3NDYyMzEwNzkxMDE1NjI1LCAxLjApOwogICAgY29sb3JzWzVdID0gdmVjNCgwLjQwMDAwMDAwNTk2MDQ2NDQ3NzUzOTA2MjUsIDAuMjIzNTI5NDEzMzQyNDc1ODkxMTEzMjgxMjUsIDAuMTkyMTU2ODY2MTkyODE3Njg3OTg4MjgxMjUsIDEuMCk7CiAgICBjb2xvcnNbNl0gPSB2ZWM0KDAuMjk0MTE3NjU5MzMwMzY4MDQxOTkyMTg3NSwgMC40MTE3NjQ3MTExNDE1ODYzMDM3MTA5Mzc1LCAwLjE4NDMxMzcyOTQwNTQwMzEzNzIwNzAzMTI1LCAxLjApOwogICAgY29sb3JzWzddID0gdmVjNCgwLjI0NzA1ODgyMzcwNDcxOTU0MzQ1NzAzMTI1LCAwLjI0NzA1ODgyMzcwNDcxOTU0MzQ1NzAzMTI1LCAwLjQ1NDkwMTk2MzQ3MjM2NjMzMzAwNzgxMjUsIDEuMCk7CiAgICBjb2xvcnNbOF0gPSB2ZWM0KDAuMzQ5MDE5NjE2ODQyMjY5ODk3NDYwOTM3NSwgMC4zMzcyNTQ5MTE2NjExNDgwNzEyODkwNjI1LCAwLjMyMTU2ODYzODA4NjMxODk2OTcyNjU2MjUsIDEuMCk7CiAgICBjb2xvcnNbOV0gPSB2ZWM0KDAuNjc0NTA5ODIzMzIyMjk2MTQyNTc4MTI1LCAwLjE5NjA3ODQzNDU4NjUyNDk2MzM3ODkwNjI1LCAwLjE5NjA3ODQzNDU4NjUyNDk2MzM3ODkwNjI1LCAxLjApOwogICAgY29sb3JzWzEwXSA9IHZlYzQoMC4xODgyMzUyOTc3OTkxMTA0MTI1OTc2NTYyNSwgMC4zNzY0NzA1OTU1OTgyMjA4MjUxOTUzMTI1LCAwLjUwOTgwMzk1MDc4NjU5MDU3NjE3MTg3NSwgMS4wKTsKICAgIGNvbG9yc1sxMV0gPSB2ZWM0KDAuNTYwNzg0MzM5OTA0Nzg1MTU2MjUsIDAuMzM3MjU0OTExNjYxMTQ4MDcxMjg5MDYyNSwgMC4yMzEzNzI1NTAxMjk4OTA0NDE4OTQ1MzEyNSwgMS4wKTsKICAgIGNvbG9yc1sxMl0gPSB2ZWM0KDAuNTQxMTc2NDk3OTM2MjQ4Nzc5Mjk2ODc1LCAwLjQzNTI5NDEyMTUwMzgyOTk1NjA1NDY4NzUsIDAuMTg4MjM1Mjk3Nzk5MTEwNDEyNTk3NjU2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTNdID0gdmVjNCgwLjIxNTY4NjI3NjU1NTA2MTM0MDMzMjAzMTI1LCAwLjU4MDM5MjE4MTg3MzMyMTUzMzIwMzEyNSwgMC40MzEzNzI1NTMxMTAxMjI2ODA2NjQwNjI1LCAxLjApOwogICAgY29sb3JzWzE0XSA9IHZlYzQoMC40MTE3NjQ3MTExNDE1ODYzMDM3MTA5Mzc1LCAwLjQxNTY4NjI3OTUzNTI5MzU3OTEwMTU2MjUsIDAuNDE1Njg2Mjc5NTM1MjkzNTc5MTAxNTYyNSwgMS4wKTsKICAgIGNvbG9yc1sxNV0gPSB2ZWM0KDAuNDYyNzQ1MTAwMjU5NzgwODgzNzg5MDYyNSwgMC4yNTg4MjM1NDM3ODcwMDI1NjM0NzY1NjI1LCAwLjU0MTE3NjQ5NzkzNjI0ODc3OTI5Njg3NSwgMS4wKTsKICAgIGNvbG9yc1sxNl0gPSB2ZWM0KDAuNDE1Njg2Mjc5NTM1MjkzNTc5MTAxNTYyNSwgMC43NDUwOTgwNTQ0MDkwMjcwOTk2MDkzNzUsIDAuMTg4MjM1Mjk3Nzk5MTEwNDEyNTk3NjU2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTddID0gdmVjNCgwLjU2MDc4NDMzOTkwNDc4NTE1NjI1LCAwLjU5MjE1Njg4NzA1NDQ0MzM1OTM3NSwgMC4yOTAxOTYwOTA5MzY2NjA3NjY2MDE1NjI1LCAxLjApOwogICAgY29sb3JzWzE4XSA9IHZlYzQoMC44NzQ1MDk4MTE0MDEzNjcxODc1LCAwLjQ0MzEzNzI1ODI5MTI0NDUwNjgzNTkzNzUsIDAuMTQ5MDE5NjEzODYyMDM3NjU4NjkxNDA2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTldID0gdmVjNCgwLjUxNzY0NzA4NzU3NDAwNTEyNjk1MzEyNSwgMC40OTQxMTc2NDc0MDk0MzkwODY5MTQwNjI1LCAwLjUyOTQxMTc5Mjc1NTEyNjk1MzEyNSwgMS4wKTsKICAgIGNvbG9yc1syMF0gPSB2ZWM0KDAuODUwOTgwNDAxMDM5MTIzNTM1MTU2MjUsIDAuMzQxMTc2NDgwMDU0ODU1MzQ2Njc5Njg3NSwgMC4zODgyMzUzMDA3NzkzNDI2NTEzNjcxODc1LCAxLjApOwogICAgY29sb3JzWzIxXSA9IHZlYzQoMC4zNTY4NjI3NTM2Mjk2ODQ0NDgyNDIxODc1LCAwLjQzMTM3MjU1MzExMDEyMjY4MDY2NDA2MjUsIDAuODgyMzUyOTQ4MTg4NzgxNzM4MjgxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjJdID0gdmVjNCgwLjYwMDAwMDAyMzg0MTg1NzkxMDE1NjI1LCAwLjg5ODAzOTIyMTc2MzYxMDgzOTg0Mzc1LCAwLjMxMzcyNTUwMTI5ODkwNDQxODk0NTMxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjNdID0gdmVjNCgwLjg1MDk4MDQwMTAzOTEyMzUzNTE1NjI1LCAwLjYyNzQ1MTAwMjU5NzgwODgzNzg5MDYyNSwgMC40MDAwMDAwMDU5NjA0NjQ0Nzc1MzkwNjI1LCAxLjApOwogICAgY29sb3JzWzI0XSA9IHZlYzQoMC4zODgyMzUzMDA3NzkzNDI2NTEzNjcxODc1LCAwLjYwNzg0MzE2MDYyOTI3MjQ2MDkzNzUsIDEuMCwgMS4wKTsKICAgIGNvbG9yc1syNV0gPSB2ZWM0KDAuNjA3ODQzMTYwNjI5MjcyNDYwOTM3NSwgMC42Nzg0MzEzOTE3MTYwMDM0MTc5Njg3NSwgMC43MTc2NDcwNzU2NTMwNzYxNzE4NzUsIDEuMCk7CiAgICBjb2xvcnNbMjZdID0gdmVjNCgwLjg0MzEzNzI2NDI1MTcwODk4NDM3NSwgMC40ODIzNTI5NDIyMjgzMTcyNjA3NDIxODc1LCAwLjcyOTQxMTc4MDgzNDE5Nzk5ODA0Njg3NSwgMS4wKTsKICAgIGNvbG9yc1syN10gPSB2ZWM0KDAuMzcyNTQ5MDI3MjA0NTEzNTQ5ODA0Njg3NSwgMC44MDM5MjE1ODAzMTQ2MzYyMzA0Njg3NSwgMC44OTQxMTc2NTMzNjk5MDM1NjQ0NTMxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjhdID0gdmVjNCgwLjk4NDMxMzcyNjQyNTE3MDg5ODQzNzUsIDAuOTQ5MDE5NjEwODgxODA1NDE5OTIxODc1LCAwLjIxMTc2NDcwODE2MTM1NDA2NDk0MTQwNjI1LCAxLjApOwogICAgY29sb3JzWzI5XSA9IHZlYzQoMC45MzMzMzMzMzczMDY5NzYzMTgzNTkzNzUsIDAuNzY0NzA1ODk2Mzc3NTYzNDc2NTYyNSwgMC42MDM5MjE1OTIyMzU1NjUxODU1NDY4NzUsIDEuMCk7CiAgICBjb2xvcnNbMzBdID0gdmVjNCgwLjc5NjA3ODQ0MzUyNzIyMTY3OTY4NzUsIDAuODU4ODIzNTM3ODI2NTM4MDg1OTM3NSwgMC45ODgyMzUyOTQ4MTg4NzgxNzM4MjgxMjUsIDEuMCk7CiAgICBjb2xvcnNbMzFdID0gdmVjNCgxLjApOwogICAgZm9yIChpbnQgaSA9IDA7IGkgPCAzMjsgaSsrKQogICAgewogICAgICAgIGhpZ2hwIGZsb2F0IGRpc3QgPSAocG93KGFicyh0ZXhjb2xvci54IC0gY29sb3JzW2ldLngpLCAyLjApICsgcG93KGFicyh0ZXhjb2xvci55IC0gY29sb3JzW2ldLnkpLCAyLjApKSArIHBvdyhhYnModGV4Y29sb3IueiAtIGNvbG9yc1tpXS56KSwgMi4wKTsKICAgICAgICBpZiAoZGlzdCA8IG1pbkRpc3QpCiAgICAgICAgewogICAgICAgICAgICBtaW5EaXN0ID0gZGlzdDsKICAgICAgICAgICAgc2VsZWN0ZWQgPSBjb2xvcnNbaV07CiAgICAgICAgfQogICAgfQogICAgYm9vbCBfMzEzID0gbm9pc2Vjb2xvci54IDwgKDAuMjcwMDAwMDEwNzI4ODM2MDU5NTcwMzEyNSArIChzaW4odGltZSkgKiAwLjA3MDAwMDAwMDI5ODAyMzIyMzg3Njk1MzEyNSkpOwogICAgYm9vbCBfMzIwOwogICAgaWYgKF8zMTMpCiAgICB7CiAgICAgICAgXzMyMCA9IHNlbGVjdGVkLnggPCAwLjgwMDAwMDAxMTkyMDkyODk1NTA3ODEyNTsKICAgIH0KICAgIGVsc2UKICAgIHsKICAgICAgICBfMzIwID0gXzMxMzsKICAgIH0KICAgIGJvb2wgXzMyNjsKICAgIGlmIChfMzIwKQogICAgewogICAgICAgIF8zMjYgPSBzZWxlY3RlZC55IDwgMC44MDAwMDAwMTE5MjA5Mjg5NTUwNzgxMjU7CiAgICB9CiAgICBlbHNlCiAgICB7CiAgICAgICAgXzMyNiA9IF8zMjA7CiAgICB9CiAgICBib29sIF8zMzI7CiAgICBpZiAoXzMyNikKICAgIHsKICAgICAgICBfMzMyID0gc2VsZWN0ZWQueiA8IDAuODAwMDAwMDExOTIwOTI4OTU1MDc4MTI1OwogICAgfQogICAgZWxzZQogICAgewogICAgICAgIF8zMzIgPSBfMzI2OwogICAgfQogICAgaWYgKF8zMzIpCiAgICB7CiAgICAgICAgaGlnaHAgdmVjMyBfMzQwID0gY2xhbXAoc2VsZWN0ZWQueHl6ICogMC44MDAwMDAwMTE5MjA5Mjg5NTUwNzgxMjUsIHZlYzMoMC4wKSwgdmVjMygxLjApKTsKICAgICAgICBzZWxlY3RlZCA9IHZlYzQoXzM0MC54LCBfMzQwLnksIF8zNDAueiwgc2VsZWN0ZWQudyk7CiAgICB9CiAgICBGcmFnQ29sb3IgPSBzZWxlY3RlZDsKfQoK";
+kha_Shaders.pipeline_fragData2 = "s7047:I3ZlcnNpb24gMTAwCnByZWNpc2lvbiBtZWRpdW1wIGZsb2F0OwpwcmVjaXNpb24gbWVkaXVtcCBpbnQ7Cgp1bmlmb3JtIG1lZGl1bXAgc2FtcGxlcjJEIG1hc2s7CnVuaWZvcm0gbWVkaXVtcCBzYW1wbGVyMkQgdGV4Owp1bmlmb3JtIG1lZGl1bXAgc2FtcGxlcjJEIF9ub2lzZTsKCnZhcnlpbmcgdmVjMiB0ZXhDb29yZDsKdmFyeWluZyBmbG9hdCB0aW1lOwp2YXJ5aW5nIHZlYzQgY29sb3I7CmZsb2F0IG1pbkRpc3Q7CnZlYzQgY29sb3JzWzMyXTsKdmVjNCBzZWxlY3RlZDsKCnZvaWQgbWFpbigpCnsKICAgIG1pbkRpc3QgPSAzLjA7CiAgICB2ZWM0IG1hc2tjb2xvciA9IHRleHR1cmUyRChtYXNrLCB0ZXhDb29yZCk7CiAgICB2ZWMyIGNvb3JkID0gdGV4Q29vcmQ7CiAgICBpZiAobWFza2NvbG9yLncgPT0gMS4wKQogICAgewogICAgICAgIGNvb3JkLnggKz0gKCgoMi4wICogc2luKCh0ZXhDb29yZC55ICogdGltZSkgKiAzLjApKSAqIDEuMCkgLyAzMjAuMCk7CiAgICB9CiAgICB2ZWM0IHRleGNvbG9yID0gdGV4dHVyZTJEKHRleCwgY29vcmQpOwogICAgdmVjNCBub2lzZWNvbG9yID0gdGV4dHVyZTJEKF9ub2lzZSwgdGV4Q29vcmQpOwogICAgaWYgKG1hc2tjb2xvci53ID09IDEuMCkKICAgIHsKICAgICAgICB2ZWMzIF84MCA9IGNsYW1wKHRleGNvbG9yLnh5eiAqIG1hc2tjb2xvci53LCB2ZWMzKDAuMTAwMDAwMDAxNDkwMTE2MTE5Mzg0NzY1NjI1KSwgdmVjMygwLjg5OTk5OTk3NjE1ODE0MjA4OTg0Mzc1KSk7CiAgICAgICAgdGV4Y29sb3IgPSB2ZWM0KF84MC54LCBfODAueSwgXzgwLnosIHRleGNvbG9yLncpOwogICAgfQogICAgY29sb3JzWzBdID0gdmVjNCgwLjAsIDAuMCwgMC4wLCAxLjApOwogICAgY29sb3JzWzFdID0gdmVjNCgwLjEzMzMzMzM0MDI4NzIwODU1NzEyODkwNjI1LCAwLjEyNTQ5MDIwMzQ5OTc5NDAwNjM0NzY1NjI1LCAwLjIwMzkyMTU3MTM3MzkzOTUxNDE2MDE1NjI1LCAxLjApOwogICAgY29sb3JzWzJdID0gdmVjNCgwLjE5NjA3ODQzNDU4NjUyNDk2MzM3ODkwNjI1LCAwLjIzNTI5NDExODUyMzU5NzcxNzI4NTE1NjI1LCAwLjIyMzUyOTQxMzM0MjQ3NTg5MTExMzI4MTI1LCAxLjApOwogICAgY29sb3JzWzNdID0gdmVjNCgwLjI3MDU4ODI0ODk2ODEyNDM4OTY0ODQzNzUsIDAuMTU2ODYyNzUwNjQ5NDUyMjA5NDcyNjU2MjUsIDAuMjM1Mjk0MTE4NTIzNTk3NzE3Mjg1MTU2MjUsIDEuMCk7CiAgICBjb2xvcnNbNF0gPSB2ZWM0KDAuMzIxNTY4NjM4MDg2MzE4OTY5NzI2NTYyNSwgMC4yOTQxMTc2NTkzMzAzNjgwNDE5OTIxODc1LCAwLjE0MTE3NjQ3NzA3NDYyMzEwNzkxMDE1NjI1LCAxLjApOwogICAgY29sb3JzWzVdID0gdmVjNCgwLjQwMDAwMDAwNTk2MDQ2NDQ3NzUzOTA2MjUsIDAuMjIzNTI5NDEzMzQyNDc1ODkxMTEzMjgxMjUsIDAuMTkyMTU2ODY2MTkyODE3Njg3OTg4MjgxMjUsIDEuMCk7CiAgICBjb2xvcnNbNl0gPSB2ZWM0KDAuMjk0MTE3NjU5MzMwMzY4MDQxOTkyMTg3NSwgMC40MTE3NjQ3MTExNDE1ODYzMDM3MTA5Mzc1LCAwLjE4NDMxMzcyOTQwNTQwMzEzNzIwNzAzMTI1LCAxLjApOwogICAgY29sb3JzWzddID0gdmVjNCgwLjI0NzA1ODgyMzcwNDcxOTU0MzQ1NzAzMTI1LCAwLjI0NzA1ODgyMzcwNDcxOTU0MzQ1NzAzMTI1LCAwLjQ1NDkwMTk2MzQ3MjM2NjMzMzAwNzgxMjUsIDEuMCk7CiAgICBjb2xvcnNbOF0gPSB2ZWM0KDAuMzQ5MDE5NjE2ODQyMjY5ODk3NDYwOTM3NSwgMC4zMzcyNTQ5MTE2NjExNDgwNzEyODkwNjI1LCAwLjMyMTU2ODYzODA4NjMxODk2OTcyNjU2MjUsIDEuMCk7CiAgICBjb2xvcnNbOV0gPSB2ZWM0KDAuNjc0NTA5ODIzMzIyMjk2MTQyNTc4MTI1LCAwLjE5NjA3ODQzNDU4NjUyNDk2MzM3ODkwNjI1LCAwLjE5NjA3ODQzNDU4NjUyNDk2MzM3ODkwNjI1LCAxLjApOwogICAgY29sb3JzWzEwXSA9IHZlYzQoMC4xODgyMzUyOTc3OTkxMTA0MTI1OTc2NTYyNSwgMC4zNzY0NzA1OTU1OTgyMjA4MjUxOTUzMTI1LCAwLjUwOTgwMzk1MDc4NjU5MDU3NjE3MTg3NSwgMS4wKTsKICAgIGNvbG9yc1sxMV0gPSB2ZWM0KDAuNTYwNzg0MzM5OTA0Nzg1MTU2MjUsIDAuMzM3MjU0OTExNjYxMTQ4MDcxMjg5MDYyNSwgMC4yMzEzNzI1NTAxMjk4OTA0NDE4OTQ1MzEyNSwgMS4wKTsKICAgIGNvbG9yc1sxMl0gPSB2ZWM0KDAuNTQxMTc2NDk3OTM2MjQ4Nzc5Mjk2ODc1LCAwLjQzNTI5NDEyMTUwMzgyOTk1NjA1NDY4NzUsIDAuMTg4MjM1Mjk3Nzk5MTEwNDEyNTk3NjU2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTNdID0gdmVjNCgwLjIxNTY4NjI3NjU1NTA2MTM0MDMzMjAzMTI1LCAwLjU4MDM5MjE4MTg3MzMyMTUzMzIwMzEyNSwgMC40MzEzNzI1NTMxMTAxMjI2ODA2NjQwNjI1LCAxLjApOwogICAgY29sb3JzWzE0XSA9IHZlYzQoMC40MTE3NjQ3MTExNDE1ODYzMDM3MTA5Mzc1LCAwLjQxNTY4NjI3OTUzNTI5MzU3OTEwMTU2MjUsIDAuNDE1Njg2Mjc5NTM1MjkzNTc5MTAxNTYyNSwgMS4wKTsKICAgIGNvbG9yc1sxNV0gPSB2ZWM0KDAuNDYyNzQ1MTAwMjU5NzgwODgzNzg5MDYyNSwgMC4yNTg4MjM1NDM3ODcwMDI1NjM0NzY1NjI1LCAwLjU0MTE3NjQ5NzkzNjI0ODc3OTI5Njg3NSwgMS4wKTsKICAgIGNvbG9yc1sxNl0gPSB2ZWM0KDAuNDE1Njg2Mjc5NTM1MjkzNTc5MTAxNTYyNSwgMC43NDUwOTgwNTQ0MDkwMjcwOTk2MDkzNzUsIDAuMTg4MjM1Mjk3Nzk5MTEwNDEyNTk3NjU2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTddID0gdmVjNCgwLjU2MDc4NDMzOTkwNDc4NTE1NjI1LCAwLjU5MjE1Njg4NzA1NDQ0MzM1OTM3NSwgMC4yOTAxOTYwOTA5MzY2NjA3NjY2MDE1NjI1LCAxLjApOwogICAgY29sb3JzWzE4XSA9IHZlYzQoMC44NzQ1MDk4MTE0MDEzNjcxODc1LCAwLjQ0MzEzNzI1ODI5MTI0NDUwNjgzNTkzNzUsIDAuMTQ5MDE5NjEzODYyMDM3NjU4NjkxNDA2MjUsIDEuMCk7CiAgICBjb2xvcnNbMTldID0gdmVjNCgwLjUxNzY0NzA4NzU3NDAwNTEyNjk1MzEyNSwgMC40OTQxMTc2NDc0MDk0MzkwODY5MTQwNjI1LCAwLjUyOTQxMTc5Mjc1NTEyNjk1MzEyNSwgMS4wKTsKICAgIGNvbG9yc1syMF0gPSB2ZWM0KDAuODUwOTgwNDAxMDM5MTIzNTM1MTU2MjUsIDAuMzQxMTc2NDgwMDU0ODU1MzQ2Njc5Njg3NSwgMC4zODgyMzUzMDA3NzkzNDI2NTEzNjcxODc1LCAxLjApOwogICAgY29sb3JzWzIxXSA9IHZlYzQoMC4zNTY4NjI3NTM2Mjk2ODQ0NDgyNDIxODc1LCAwLjQzMTM3MjU1MzExMDEyMjY4MDY2NDA2MjUsIDAuODgyMzUyOTQ4MTg4NzgxNzM4MjgxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjJdID0gdmVjNCgwLjYwMDAwMDAyMzg0MTg1NzkxMDE1NjI1LCAwLjg5ODAzOTIyMTc2MzYxMDgzOTg0Mzc1LCAwLjMxMzcyNTUwMTI5ODkwNDQxODk0NTMxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjNdID0gdmVjNCgwLjg1MDk4MDQwMTAzOTEyMzUzNTE1NjI1LCAwLjYyNzQ1MTAwMjU5NzgwODgzNzg5MDYyNSwgMC40MDAwMDAwMDU5NjA0NjQ0Nzc1MzkwNjI1LCAxLjApOwogICAgY29sb3JzWzI0XSA9IHZlYzQoMC4zODgyMzUzMDA3NzkzNDI2NTEzNjcxODc1LCAwLjYwNzg0MzE2MDYyOTI3MjQ2MDkzNzUsIDEuMCwgMS4wKTsKICAgIGNvbG9yc1syNV0gPSB2ZWM0KDAuNjA3ODQzMTYwNjI5MjcyNDYwOTM3NSwgMC42Nzg0MzEzOTE3MTYwMDM0MTc5Njg3NSwgMC43MTc2NDcwNzU2NTMwNzYxNzE4NzUsIDEuMCk7CiAgICBjb2xvcnNbMjZdID0gdmVjNCgwLjg0MzEzNzI2NDI1MTcwODk4NDM3NSwgMC40ODIzNTI5NDIyMjgzMTcyNjA3NDIxODc1LCAwLjcyOTQxMTc4MDgzNDE5Nzk5ODA0Njg3NSwgMS4wKTsKICAgIGNvbG9yc1syN10gPSB2ZWM0KDAuMzcyNTQ5MDI3MjA0NTEzNTQ5ODA0Njg3NSwgMC44MDM5MjE1ODAzMTQ2MzYyMzA0Njg3NSwgMC44OTQxMTc2NTMzNjk5MDM1NjQ0NTMxMjUsIDEuMCk7CiAgICBjb2xvcnNbMjhdID0gdmVjNCgwLjk4NDMxMzcyNjQyNTE3MDg5ODQzNzUsIDAuOTQ5MDE5NjEwODgxODA1NDE5OTIxODc1LCAwLjIxMTc2NDcwODE2MTM1NDA2NDk0MTQwNjI1LCAxLjApOwogICAgY29sb3JzWzI5XSA9IHZlYzQoMC45MzMzMzMzMzczMDY5NzYzMTgzNTkzNzUsIDAuNzY0NzA1ODk2Mzc3NTYzNDc2NTYyNSwgMC42MDM5MjE1OTIyMzU1NjUxODU1NDY4NzUsIDEuMCk7CiAgICBjb2xvcnNbMzBdID0gdmVjNCgwLjc5NjA3ODQ0MzUyNzIyMTY3OTY4NzUsIDAuODU4ODIzNTM3ODI2NTM4MDg1OTM3NSwgMC45ODgyMzUyOTQ4MTg4NzgxNzM4MjgxMjUsIDEuMCk7CiAgICBjb2xvcnNbMzFdID0gdmVjNCgxLjApOwogICAgZm9yIChpbnQgaSA9IDA7IGkgPCAzMjsgaSsrKQogICAgewogICAgICAgIGZsb2F0IGRpc3QgPSAocG93KGFicyh0ZXhjb2xvci54IC0gY29sb3JzW2ldLngpLCAyLjApICsgcG93KGFicyh0ZXhjb2xvci55IC0gY29sb3JzW2ldLnkpLCAyLjApKSArIHBvdyhhYnModGV4Y29sb3IueiAtIGNvbG9yc1tpXS56KSwgMi4wKTsKICAgICAgICBpZiAoZGlzdCA8IG1pbkRpc3QpCiAgICAgICAgewogICAgICAgICAgICBtaW5EaXN0ID0gZGlzdDsKICAgICAgICAgICAgc2VsZWN0ZWQgPSBjb2xvcnNbaV07CiAgICAgICAgfQogICAgfQogICAgYm9vbCBfMzEzID0gbm9pc2Vjb2xvci54IDwgKDAuMjcwMDAwMDEwNzI4ODM2MDU5NTcwMzEyNSArIChzaW4odGltZSkgKiAwLjA3MDAwMDAwMDI5ODAyMzIyMzg3Njk1MzEyNSkpOwogICAgYm9vbCBfMzIwOwogICAgaWYgKF8zMTMpCiAgICB7CiAgICAgICAgXzMyMCA9IHNlbGVjdGVkLnggPCAwLjgwMDAwMDAxMTkyMDkyODk1NTA3ODEyNTsKICAgIH0KICAgIGVsc2UKICAgIHsKICAgICAgICBfMzIwID0gXzMxMzsKICAgIH0KICAgIGJvb2wgXzMyNjsKICAgIGlmIChfMzIwKQogICAgewogICAgICAgIF8zMjYgPSBzZWxlY3RlZC55IDwgMC44MDAwMDAwMTE5MjA5Mjg5NTUwNzgxMjU7CiAgICB9CiAgICBlbHNlCiAgICB7CiAgICAgICAgXzMyNiA9IF8zMjA7CiAgICB9CiAgICBib29sIF8zMzI7CiAgICBpZiAoXzMyNikKICAgIHsKICAgICAgICBfMzMyID0gc2VsZWN0ZWQueiA8IDAuODAwMDAwMDExOTIwOTI4OTU1MDc4MTI1OwogICAgfQogICAgZWxzZQogICAgewogICAgICAgIF8zMzIgPSBfMzI2OwogICAgfQogICAgaWYgKF8zMzIpCiAgICB7CiAgICAgICAgdmVjMyBfMzQwID0gY2xhbXAoc2VsZWN0ZWQueHl6ICogMC44MDAwMDAwMTE5MjA5Mjg5NTUwNzgxMjUsIHZlYzMoMC4wKSwgdmVjMygxLjApKTsKICAgICAgICBzZWxlY3RlZCA9IHZlYzQoXzM0MC54LCBfMzQwLnksIF8zNDAueiwgc2VsZWN0ZWQudyk7CiAgICB9CiAgICBnbF9GcmFnRGF0YVswXSA9IHNlbGVjdGVkOwp9Cgo";
+kha_Shaders.pipeline_vertData0 = "s486:I3ZlcnNpb24gMTAwCgp1bmlmb3JtIG1hdDQgcHJvamVjdGlvbk1hdHJpeDsKdW5pZm9ybSBmbG9hdCB1VGltZTsKCmF0dHJpYnV0ZSB2ZWMzIHZlcnRleFBvc2l0aW9uOwp2YXJ5aW5nIHZlYzIgdGV4Q29vcmQ7CmF0dHJpYnV0ZSB2ZWMyIHZlcnRleFVWOwp2YXJ5aW5nIGZsb2F0IHRpbWU7CnZhcnlpbmcgdmVjNCBjb2xvcjsKYXR0cmlidXRlIHZlYzQgdmVydGV4Q29sb3I7Cgp2b2lkIG1haW4oKQp7CiAgICBnbF9Qb3NpdGlvbiA9IHByb2plY3Rpb25NYXRyaXggKiB2ZWM0KHZlcnRleFBvc2l0aW9uLCAxLjApOwogICAgdGV4Q29vcmQgPSB2ZXJ0ZXhVVjsKICAgIHRpbWUgPSB1VGltZTsKICAgIGNvbG9yID0gdmVydGV4Q29sb3I7Cn0KCg";
+kha_Shaders.pipeline_vertData1 = "s446:I3ZlcnNpb24gMzAwIGVzCgp1bmlmb3JtIG1hdDQgcHJvamVjdGlvbk1hdHJpeDsKdW5pZm9ybSBmbG9hdCB1VGltZTsKCmluIHZlYzMgdmVydGV4UG9zaXRpb247Cm91dCB2ZWMyIHRleENvb3JkOwppbiB2ZWMyIHZlcnRleFVWOwpvdXQgZmxvYXQgdGltZTsKb3V0IHZlYzQgY29sb3I7CmluIHZlYzQgdmVydGV4Q29sb3I7Cgp2b2lkIG1haW4oKQp7CiAgICBnbF9Qb3NpdGlvbiA9IHByb2plY3Rpb25NYXRyaXggKiB2ZWM0KHZlcnRleFBvc2l0aW9uLCAxLjApOwogICAgdGV4Q29vcmQgPSB2ZXJ0ZXhVVjsKICAgIHRpbWUgPSB1VGltZTsKICAgIGNvbG9yID0gdmVydGV4Q29sb3I7Cn0KCg";
+kha_Shaders.pipeline_vertData2 = "s571:I3ZlcnNpb24gMTAwCgp1bmlmb3JtIG1lZGl1bXAgbWF0NCBwcm9qZWN0aW9uTWF0cml4Owp1bmlmb3JtIG1lZGl1bXAgZmxvYXQgdVRpbWU7CgphdHRyaWJ1dGUgbWVkaXVtcCB2ZWMzIHZlcnRleFBvc2l0aW9uOwp2YXJ5aW5nIG1lZGl1bXAgdmVjMiB0ZXhDb29yZDsKYXR0cmlidXRlIG1lZGl1bXAgdmVjMiB2ZXJ0ZXhVVjsKdmFyeWluZyBtZWRpdW1wIGZsb2F0IHRpbWU7CnZhcnlpbmcgbWVkaXVtcCB2ZWM0IGNvbG9yOwphdHRyaWJ1dGUgbWVkaXVtcCB2ZWM0IHZlcnRleENvbG9yOwoKdm9pZCBtYWluKCkKewogICAgZ2xfUG9zaXRpb24gPSBwcm9qZWN0aW9uTWF0cml4ICogdmVjNCh2ZXJ0ZXhQb3NpdGlvbiwgMS4wKTsKICAgIHRleENvb3JkID0gdmVydGV4VVY7CiAgICB0aW1lID0gdVRpbWU7CiAgICBjb2xvciA9IHZlcnRleENvbG9yOwp9Cgo";
 kha_System.renderListeners = [];
 kha_System.foregroundListeners = [];
 kha_System.resumeListeners = [];

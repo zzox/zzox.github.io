@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="24">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextlayerid="11" nextobjectid="32">
  <objectgroup id="7" name="start">
   <object id="9" x="656" y="1520" width="16" height="16">
    <properties>
     <property name="rotation" type="int" value="270"/>
    </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="10" name="black">
+  <object id="28" x="720" y="1552">
+   <polygon points="0,0 -112,-1072 -112,0"/>
+  </object>
+  <object id="29" x="720" y="1552">
+   <polygon points="0,0 -112,-1072 0,-960"/>
+  </object>
+  <object id="30" x="608" y="480">
+   <polygon points="0,0 736,0 112,112"/>
+  </object>
+  <object id="31" x="720" y="592">
+   <polygon points="0,0 624,0 624,-112"/>
   </object>
  </objectgroup>
  <objectgroup id="6" name="finish">

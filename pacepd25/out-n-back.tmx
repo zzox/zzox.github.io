@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="256" height="256" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="63">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="256" height="256" tilewidth="8" tileheight="8" infinite="0" nextlayerid="7" nextobjectid="70">
  <objectgroup id="2" name="start">
   <object id="1" x="1024" y="1792" width="16" height="16">
    <properties>
@@ -20,6 +20,26 @@
   <object id="58" x="1080" y="696" width="16" height="16"/>
   <object id="59" x="1080" y="568" width="16" height="16"/>
   <object id="62" x="1080" y="840" width="16" height="16"/>
+ </objectgroup>
+ <objectgroup id="6" name="black">
+  <object id="64" x="1064" y="1816">
+   <polygon points="0,0 -64,0 -64,-1784"/>
+  </object>
+  <object id="65" x="1064" y="1816">
+   <polygon points="0,0 -64,-1784 0,-1696"/>
+  </object>
+  <object id="66" x="1064" y="120">
+   <polygon points="0,0 120,-88 -64,-88"/>
+  </object>
+  <object id="67" x="1112" y="120">
+   <polygon points="0,0 72,-88 -48,0"/>
+  </object>
+  <object id="68" x="1184" y="32">
+   <polygon points="0,0 0,1744 -72,88"/>
+  </object>
+  <object id="69" x="1112" y="120">
+   <polygon points="0,0 72,1656 0,1656"/>
+  </object>
  </objectgroup>
  <objectgroup id="4" name="collision">
   <object id="25" x="1000" y="1816">
