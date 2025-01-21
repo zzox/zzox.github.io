@@ -33199,7 +33199,7 @@ game_conn_Conn.prototype = {
 		this.onPeerConnect = onPeerConnect;
 		this.onPeerDisconnect = onPeerDisconnect;
 		this.onRemoteInput = onRemoteInput;
-		this.ws = new game_conn_Ws("ws://localhost:6969",function() {
+		this.ws = new game_conn_Ws("wss://pacepd25-e2ef41da108c.herokuapp.com/",function() {
 			_gthis.socketConnectState = game_conn_SocketConnectionState.SCConnected;
 			_gthis.onServerConnect();
 		},function() {
@@ -68777,7 +68777,7 @@ echo_util_AABB.pool = new echo_util_GenericPool_$echo_$util_$AABB(echo_util_AABB
 echo_util_QuadTree.pool = new echo_util_GenericPool_$echo_$util_$QuadTree(echo_util_QuadTree);
 echo_util_SAT.norm = new echo_math_Vector2Default(0,0);
 echo_util_SAT.closest = new echo_math_Vector2Default(0,0);
-game_conn_Conn.WS_URL = "ws://localhost:6969";
+game_conn_Conn.WS_URL = "wss://pacepd25-e2ef41da108c.herokuapp.com/";
 var game_conn_Connection_PING_ITEMS = 40;
 var game_conn_Connection_PING_INTERVAL = 250;
 var game_data_LevelData_levelOrder = [game_data_Level.ArcUp,game_data_Level.HardRight,game_data_Level.OutNBack,game_data_Level.Spiral];
