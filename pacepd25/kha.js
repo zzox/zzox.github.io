@@ -134,8 +134,8 @@ $hxClasses["Main"] = Main;
 Main.__name__ = "Main";
 Main.main = function() {
 	Main.setFullWindowCanvas();
-	new core_Game(new core_IntVec2(1300,750),new game_scenes_LevelSelect(),core_ScaleMode.PixelPerfect,"pace",new core_IntVec2(320,180),function(e) {
-		core_Logs_sendErrorLogs(e);
+	new core_Game(new core_IntVec2(1300,750),new game_scenes_MainMenu(),core_ScaleMode.PixelPerfect,"pace",new core_IntVec2(320,180),function(e) {
+		haxe_Log.trace("e",{ fileName : "Main.hx", lineNumber : 25, className : "Main", methodName : "main", customParams : [e]});
 		throw haxe_Exception.thrown(e);
 	},function(item) {
 		if(item.type == "sound" && item.files[0].indexOf("random-string-here") != -1) {
@@ -33191,7 +33191,7 @@ game_conn_Conn.prototype = {
 	,init: function(onServerConnect,onServerDisconnect,onPeerConnect,onPeerDisconnect,onRemoteInput) {
 		var _gthis = this;
 		if(this.socketConnectState != game_conn_SocketConnectionState.SCOffline || this.peerConnectState != game_conn_PeerConnectionState.PCOffline) {
-			haxe_Log.trace("connection already exists!",{ fileName : "game/conn/Connection.hx", lineNumber : 82, className : "game.conn.Conn", methodName : "init"});
+			haxe_Log.trace("connection already exists!",{ fileName : "game/conn/Connection.hx", lineNumber : 83, className : "game.conn.Conn", methodName : "init"});
 			return;
 		}
 		this.onServerConnect = onServerConnect;
@@ -33208,6 +33208,10 @@ game_conn_Conn.prototype = {
 		},$bind(this,this.handleWebsocketMessage));
 		this.rtc = new game_conn_Rtc($bind(this,this.handleIceCandidate),$bind(this,this.handlePeerMessage),function() {
 			_gthis.startPing();
+			_gthis.onPeerConnect();
+		},function() {
+			_gthis.peerConnectState = game_conn_PeerConnectionState.PCOffline;
+			_gthis.onPeerDisconnect("datachannel closed");
 		});
 	}
 	,addListeners: function(onServerConnect,onServerDisconnect,onPeerConnect,onPeerDisconnect,onRemoteInput) {
@@ -33263,7 +33267,7 @@ game_conn_Conn.prototype = {
 			this.onRemoteInput({ index : payload.index, input : payload.input});
 			break;
 		default:
-			haxe_Log.trace("unhandled peer message",{ fileName : "game/conn/Connection.hx", lineNumber : 161, className : "game.conn.Conn", methodName : "handlePeerMessage", customParams : [type,payload]});
+			game_util_Logger.debug("unhandled peer message",type,payload);
 		}
 	}
 	,startPing: function() {
@@ -33280,7 +33284,7 @@ game_conn_Conn.prototype = {
 		if(this.roomId == null) {
 			this.sendWsMessage("join-or-create");
 		} else {
-			haxe_Log.trace("already in room",{ fileName : "game/conn/Connection.hx", lineNumber : 183, className : "game.conn.Conn", methodName : "joinOrCreateRoom"});
+			haxe_Log.trace("already in room",{ fileName : "game/conn/Connection.hx", lineNumber : 187, className : "game.conn.Conn", methodName : "joinOrCreateRoom"});
 		}
 	}
 	,createRoom: function() {
@@ -33291,11 +33295,11 @@ game_conn_Conn.prototype = {
 	}
 	,sendWsMessage: function(type,payload) {
 		if(this.socketConnectState != game_conn_SocketConnectionState.SCConnected) {
-			haxe_Log.trace("not connected",{ fileName : "game/conn/Connection.hx", lineNumber : 209, className : "game.conn.Conn", methodName : "sendWsMessage"});
+			haxe_Log.trace("not connected",{ fileName : "game/conn/Connection.hx", lineNumber : 213, className : "game.conn.Conn", methodName : "sendWsMessage"});
 			return;
 		}
 		if(this.ws == null) {
-			haxe_Log.trace("Websocket not initialized",{ fileName : "game/conn/Connection.hx", lineNumber : 214, className : "game.conn.Conn", methodName : "sendWsMessage"});
+			haxe_Log.trace("Websocket not initialized",{ fileName : "game/conn/Connection.hx", lineNumber : 218, className : "game.conn.Conn", methodName : "sendWsMessage"});
 			return;
 		}
 		this.ws.send({ type : type, payload : payload});
@@ -33305,7 +33309,7 @@ game_conn_Conn.prototype = {
 		var type = message.type;
 		switch(type) {
 		case "ice-candidate":
-			haxe_Log.trace("got candidate",{ fileName : "game/conn/Connection.hx", lineNumber : 248, className : "game.conn.Conn", methodName : "handleWebsocketMessage", customParams : [payload]});
+			game_util_Logger.debug("got candidate",payload);
 			this.rtc.addIceCandidate(payload);
 			break;
 		case "joined-room":
@@ -33313,27 +33317,29 @@ game_conn_Conn.prototype = {
 			this.roomId = payload;
 			break;
 		case "peer-joined":
-			haxe_Log.trace("sending offer",{ fileName : "game/conn/Connection.hx", lineNumber : 233, className : "game.conn.Conn", methodName : "handleWebsocketMessage"});
+			game_util_Logger.log("sending offer");
 			this.peerConnectState = game_conn_PeerConnectionState.PCConnecting;
 			this.rtc.createOffer($bind(this,this.onOfferGenerated));
 			break;
 		case "room-created":
-			haxe_Log.trace("room created",{ fileName : "game/conn/Connection.hx", lineNumber : 227, className : "game.conn.Conn", methodName : "handleWebsocketMessage"});
+			game_util_Logger.log("room created");
 			this.isHost = true;
 			this.roomId = payload;
 			this.rtc.createDataChannel();
 			break;
 		case "sdp-answer":
-			haxe_Log.trace("got answer",{ fileName : "game/conn/Connection.hx", lineNumber : 245, className : "game.conn.Conn", methodName : "handleWebsocketMessage", customParams : [payload]});
+			game_util_Logger.log("got answer");
+			game_util_Logger.debug("answer",payload);
 			this.rtc.setAnswer(payload);
 			break;
 		case "sdp-offer":
-			haxe_Log.trace("got offer",{ fileName : "game/conn/Connection.hx", lineNumber : 241, className : "game.conn.Conn", methodName : "handleWebsocketMessage", customParams : [payload]});
+			game_util_Logger.log("got offer");
+			game_util_Logger.debug("offer",payload);
 			this.peerConnectState = game_conn_PeerConnectionState.PCConnecting;
 			this.rtc.setRemoteDescription(payload,$bind(this,this.onAnswerGenerated));
 			break;
 		default:
-			haxe_Log.trace("unhandled message",{ fileName : "game/conn/Connection.hx", lineNumber : 251, className : "game.conn.Conn", methodName : "handleWebsocketMessage", customParams : [type,payload]});
+			game_util_Logger.debug("unhandled message",type,payload);
 		}
 	}
 	,onOfferGenerated: function(offer) {
@@ -33347,12 +33353,12 @@ game_conn_Conn.prototype = {
 	}
 	,__class__: game_conn_Conn
 };
-var game_conn_Rtc = function(onIceCandidate,onDatachannelMessage,onDatachannelOpened) {
+var game_conn_Rtc = function(onIceCandidate,onDatachannelMessage,onDatachannelOpened,onDatachannelClosed) {
 	this.isOpen = false;
 	var _gthis = this;
 	this.pc = new RTCPeerConnection({ iceServers : [{ urls : "stun:stun.l.google.com:19302"}]});
 	this.pc.onsignalingstatechange = function(state) {
-		haxe_Log.trace("signalingState: " + _gthis.pc.signalingState,{ fileName : "game/conn/Rtc.hx", lineNumber : 34, className : "game.conn.Rtc", methodName : "new"});
+		game_util_Logger.log("signalingState: " + _gthis.pc.signalingState);
 	};
 	this.pc.onicecandidate = function(data) {
 		if(data.candidate != null) {
@@ -33362,6 +33368,7 @@ var game_conn_Rtc = function(onIceCandidate,onDatachannelMessage,onDatachannelOp
 	this.pc.ondatachannel = $bind(this,this.handleDatachannelOpened);
 	this.onDatachannelMessage = onDatachannelMessage;
 	this.onDatachannelOpened = onDatachannelOpened;
+	this.onDatachannelClosed = onDatachannelClosed;
 };
 $hxClasses["game.conn.Rtc"] = game_conn_Rtc;
 game_conn_Rtc.__name__ = "game.conn.Rtc";
@@ -33370,12 +33377,13 @@ game_conn_Rtc.prototype = {
 	,datachannel: null
 	,onDatachannelMessage: null
 	,onDatachannelOpened: null
+	,onDatachannelClosed: null
 	,isOpen: null
 	,sendMessage: function(type,payload) {
 		if(this.isOpen) {
 			this.datachannel.send(JSON.stringify({ type : type, payload : payload}));
 		} else {
-			haxe_Log.trace("cannot send message, data channel closed",{ fileName : "game/conn/Rtc.hx", lineNumber : 53, className : "game.conn.Rtc", methodName : "sendMessage"});
+			game_util_Logger.debug("cannot send message, data channel closed");
 		}
 	}
 	,handleDatachannelOpened: function(dc) {
@@ -33383,11 +33391,15 @@ game_conn_Rtc.prototype = {
 		if(this.datachannel == null) {
 			this.datachannel = dc.channel;
 		}
-		haxe_Log.trace("channel opened",{ fileName : "game/conn/Rtc.hx", lineNumber : 63, className : "game.conn.Rtc", methodName : "handleDatachannelOpened"});
+		game_util_Logger.log("channel opened");
 		this.isOpen = true;
 		this.onDatachannelOpened();
 		this.datachannel.onmessage = function(message) {
 			_gthis.onDatachannelMessage(JSON.parse(message.data));
+		};
+		this.datachannel.onclose = function() {
+			_gthis.isOpen = false;
+			_gthis.onDatachannelClosed();
 		};
 	}
 	,createDataChannel: function() {
@@ -33431,22 +33443,28 @@ var game_conn_Ws = function(url,onOpen,onClose,onMessage) {
 	this.ws = new WebSocket(url);
 	this.ws.onmessage = function(message) {
 		var parsed = JSON.parse(message.data);
-		haxe_Log.trace("websocket message",{ fileName : "game/conn/Ws.hx", lineNumber : 27, className : "game.conn.Ws", methodName : "new", customParams : [parsed]});
+		game_util_Logger.debug("websocket message",parsed);
 		_gthis.onMessageHandler(parsed);
 	};
 	this.ws.onopen = function() {
 		_gthis.isOpen = true;
 		_gthis.onOpenHandler();
-		haxe_Log.trace("websocket opened",{ fileName : "game/conn/Ws.hx", lineNumber : 34, className : "game.conn.Ws", methodName : "new"});
+		haxe_Log.trace("websocket opened",{ fileName : "game/conn/Ws.hx", lineNumber : 35, className : "game.conn.Ws", methodName : "new"});
 	};
 	this.ws.onclose = function() {
 		_gthis.isOpen = false;
 		_gthis.onCloseHandler();
 		_gthis.destroy();
-		haxe_Log.trace("websocket closed",{ fileName : "game/conn/Ws.hx", lineNumber : 41, className : "game.conn.Ws", methodName : "new"});
+		haxe_Log.trace("websocket closed",{ fileName : "game/conn/Ws.hx", lineNumber : 42, className : "game.conn.Ws", methodName : "new"});
 	};
 	this.ws.onerror = function(e) {
 		console.error(e);
+	};
+	var timer = new haxe_Timer(25000);
+	timer.run = function() {
+		if(_gthis.isOpen) {
+			_gthis.send({ type : "ping", payload : "hi"});
+		}
 	};
 };
 $hxClasses["game.conn.Ws"] = game_conn_Ws;
@@ -33461,7 +33479,7 @@ game_conn_Ws.prototype = {
 		if(this.isOpen) {
 			this.ws.send(JSON.stringify(message));
 		} else {
-			haxe_Log.trace("Failed to send message, websocket is closed.",{ fileName : "game/conn/Ws.hx", lineNumber : 53, className : "game.conn.Ws", methodName : "send"});
+			game_util_Logger.log("Failed to send message, websocket is closed.");
 		}
 	}
 	,destroy: function() {
@@ -34451,17 +34469,186 @@ game_rollback_Rollback.prototype = {
 	}
 	,__class__: game_rollback_Rollback
 };
+var game_scenes_PaceScene = function() {
+	this.noiseItems = [];
+	this.time = 0;
+	core_Scene.call(this);
+};
+$hxClasses["game.scenes.PaceScene"] = game_scenes_PaceScene;
+game_scenes_PaceScene.__name__ = "game.scenes.PaceScene";
+game_scenes_PaceScene.__super__ = core_Scene;
+game_scenes_PaceScene.prototype = $extend(core_Scene.prototype,{
+	time: null
+	,noiseItems: null
+	,create: function() {
+		if(!game_scenes_PaceScene.initialized) {
+			game_scenes_PaceScene.image = kha_Image.createRenderTarget(320,180);
+			var shader = new core_ImageShader(kha_Shaders.pipeline_vert,kha_Shaders.pipeline_frag);
+			game_scenes_PaceScene.mask = kha_Image.createRenderTarget(320,180);
+			game_scenes_PaceScene.noise = kha_Image.createRenderTarget(320,180);
+			game_scenes_PaceScene.timeId = shader.pipeline.getConstantLocation("uTime");
+			game_scenes_PaceScene.noiseId = shader.pipeline.getTextureUnit("noise");
+			game_scenes_PaceScene.maskId = shader.pipeline.getTextureUnit("mask");
+			game_scenes_PaceScene.pipeline = shader.pipeline;
+			game_scenes_PaceScene.oldPipeline = game_scenes_PaceScene.image.get_g2().get_pipeline();
+			game_scenes_PaceScene.initialized = true;
+		}
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),0));
+		}
+		var _g = 0;
+		while(_g < 33) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),1));
+		}
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),2));
+		}
+		this.addSprite(new game_scenes_ShootingStar());
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_RotatingBar(Math.round(Math.random() * 1024),Math.round(Math.random() * 1024),0));
+		}
+		var _g = 0;
+		while(_g < 25) {
+			var _ = _g++;
+			this.addSprite(new game_scenes_RotatingBar(Math.round(Math.random() * 2048),Math.round(Math.random() * 2048),0));
+		}
+		var item = new core_IntVec2(0,0);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+		var item = new core_IntVec2(-512,0);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+		var item = new core_IntVec2(0,-512);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+		var item = new core_IntVec2(-512,-512);
+		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
+		noise.alpha = 0.5;
+		noise.scrollFactor.set(0,0);
+		this.noiseItems.push(noise);
+	}
+	,update: function(delta) {
+		core_Scene.prototype.update.call(this,delta);
+		this.time += delta;
+		var _g = 0;
+		var _g1 = this.noiseItems;
+		while(_g < _g1.length) {
+			var n = _g1[_g];
+			++_g;
+			n.x++;
+			n.y++;
+			if(n.x == 512) {
+				n.x -= 1024;
+			}
+			if(n.y == 512) {
+				n.y -= 1024;
+			}
+		}
+	}
+	,render: function(g2,g4,clears) {
+		game_scenes_PaceScene.image.get_g2().begin(clears,this.camera.bgColor);
+		var _g = 0;
+		var _g1 = this.sprites;
+		while(_g < _g1.length) {
+			var sprite = _g1[_g];
+			++_g;
+			if(sprite.depth > 1000) {
+				sprite.render(game_scenes_PaceScene.image.get_g2(),this.camera);
+			}
+		}
+		game_scenes_PaceScene.image.get_g2().end();
+		game_scenes_PaceScene.mask.get_g2().begin(true,0);
+		var _g = 0;
+		var _g1 = this.sprites;
+		while(_g < _g1.length) {
+			var s = _g1[_g];
+			++_g;
+			if(s.depth == 1000) {
+				s.render(game_scenes_PaceScene.mask.get_g2(),this.camera);
+			}
+		}
+		game_scenes_PaceScene.mask.get_g2().end();
+		game_scenes_PaceScene.noise.get_g2().begin();
+		var _g = 0;
+		var _g1 = this.noiseItems;
+		while(_g < _g1.length) {
+			var n = _g1[_g];
+			++_g;
+			n.render(game_scenes_PaceScene.noise.get_g2(),this.camera);
+		}
+		game_scenes_PaceScene.noise.get_g2().end();
+		g4.begin();
+		g4.setPipeline(game_scenes_PaceScene.pipeline);
+		g4.setTexture(game_scenes_PaceScene.maskId,game_scenes_PaceScene.mask);
+		g4.setTexture(game_scenes_PaceScene.noiseId,game_scenes_PaceScene.noise);
+		g4.setFloat(game_scenes_PaceScene.timeId,this.time);
+		g4.end();
+		g2.begin();
+		g2.set_pipeline(game_scenes_PaceScene.pipeline);
+		g2.drawImage(game_scenes_PaceScene.image,0,0);
+		g2.set_pipeline(game_scenes_PaceScene.oldPipeline);
+		var _g = 0;
+		var _g1 = this.sprites;
+		while(_g < _g1.length) {
+			var sprite = _g1[_g];
+			++_g;
+			if(sprite.depth < 1000) {
+				sprite.render(game_scenes_PaceScene.image.get_g2(),this.camera);
+			}
+		}
+		g2.end();
+	}
+	,__class__: game_scenes_PaceScene
+});
+var game_scenes_FailScene = function(displayText) {
+	game_scenes_PaceScene.call(this);
+	this.displayText = displayText;
+};
+$hxClasses["game.scenes.FailScene"] = game_scenes_FailScene;
+game_scenes_FailScene.__name__ = "game.scenes.FailScene";
+game_scenes_FailScene.__super__ = game_scenes_PaceScene;
+game_scenes_FailScene.prototype = $extend(game_scenes_PaceScene.prototype,{
+	displayText: null
+	,create: function() {
+		var _gthis = this;
+		this.addSprite(game_ui_UiText_makeText(0,64,this.displayText,-1,true));
+		this.timers.addTimer(new core_Timer(0.66,function() {
+			_gthis.addSprite(game_ui_UiText_makeText(0,120,"Press SPACE or ESCAPE to return to menu",-1,true));
+		}));
+	}
+	,update: function(delta) {
+		game_scenes_PaceScene.prototype.update.call(this,delta);
+		if(this.game.keys.anyJustPressed([32,13,27])) {
+			this.game.switchScene(new game_scenes_MainMenu());
+		}
+	}
+	,__class__: game_scenes_FailScene
+});
 var game_scenes_LevelSelect = function() {
 	this.index = 0;
-	core_Scene.call(this);
+	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.LevelSelect"] = game_scenes_LevelSelect;
 game_scenes_LevelSelect.__name__ = "game.scenes.LevelSelect";
-game_scenes_LevelSelect.__super__ = core_Scene;
-game_scenes_LevelSelect.prototype = $extend(core_Scene.prototype,{
+game_scenes_LevelSelect.__super__ = game_scenes_PaceScene;
+game_scenes_LevelSelect.prototype = $extend(game_scenes_PaceScene.prototype,{
 	pointer: null
 	,index: null
 	,create: function() {
+		game_scenes_PaceScene.prototype.create.call(this);
 		this.addSprite(this.pointer = new core_Sprite(new core_Vec2(0,-8),kha_Assets.images.pointer,new core_IntVec2(8,8)));
 		this.addSprite(game_ui_UiText_makeText(8,4,"L E V E L     S E L E C T",-1,true));
 		var _g = 0;
@@ -34474,7 +34661,7 @@ game_scenes_LevelSelect.prototype = $extend(core_Scene.prototype,{
 		new game_data_State();
 	}
 	,update: function(delta) {
-		core_Scene.prototype.update.call(this,delta);
+		game_scenes_PaceScene.prototype.update.call(this,delta);
 		if(this.game.keys.anyJustPressed([87,38])) {
 			this.index--;
 		}
@@ -34499,22 +34686,23 @@ game_scenes_LevelSelect.prototype = $extend(core_Scene.prototype,{
 	,__class__: game_scenes_LevelSelect
 });
 var game_scenes_LobbyScene = function() {
-	core_Scene.call(this);
+	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.LobbyScene"] = game_scenes_LobbyScene;
 game_scenes_LobbyScene.__name__ = "game.scenes.LobbyScene";
-game_scenes_LobbyScene.__super__ = core_Scene;
-game_scenes_LobbyScene.prototype = $extend(core_Scene.prototype,{
+game_scenes_LobbyScene.__super__ = game_scenes_PaceScene;
+game_scenes_LobbyScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 	statusText: null
 	,pingText: null
 	,create: function() {
+		game_scenes_PaceScene.prototype.create.call(this);
 		game_conn_Connection.init();
 		game_conn_Connection.inst.addListeners(null,null,$bind(this,this.connected));
 		this.addSprite(this.statusText = game_ui_UiText_makeText(2,160));
 		this.addSprite(this.pingText = game_ui_UiText_makeText(2,170));
 	}
 	,update: function(delta) {
-		core_Scene.prototype.update.call(this,delta);
+		game_scenes_PaceScene.prototype.update.call(this,delta);
 		var text = "offline";
 		var tmp = game_conn_Connection.inst.roomId;
 		var roomId = (tmp != null ? tmp : "").split("-")[0];
@@ -34544,6 +34732,25 @@ game_scenes_LobbyScene.prototype = $extend(core_Scene.prototype,{
 		}));
 	}
 	,__class__: game_scenes_LobbyScene
+});
+var game_scenes_MainMenu = function() {
+	game_scenes_PaceScene.call(this);
+};
+$hxClasses["game.scenes.MainMenu"] = game_scenes_MainMenu;
+game_scenes_MainMenu.__name__ = "game.scenes.MainMenu";
+game_scenes_MainMenu.__super__ = game_scenes_PaceScene;
+game_scenes_MainMenu.prototype = $extend(game_scenes_PaceScene.prototype,{
+	create: function() {
+		game_scenes_PaceScene.prototype.create.call(this);
+		this.addSprite(game_ui_UiText_makeText(0,64,"p   a   c   e",-1,true));
+	}
+	,update: function(delta) {
+		game_scenes_PaceScene.prototype.update.call(this,delta);
+		if(this.game.keys.anyJustPressed([32,13,27])) {
+			this.game.switchScene(new game_scenes_LevelSelect());
+		}
+	}
+	,__class__: game_scenes_MainMenu
 });
 var game_scenes_OverScene = function(topText,subText,options) {
 	this.index = 0;
@@ -34721,155 +34928,6 @@ game_scenes_ShootingStar.prototype = $extend(core_Sprite.prototype,{
 	}
 	,__class__: game_scenes_ShootingStar
 });
-var game_scenes_PaceScene = function() {
-	this.noiseItems = [];
-	this.time = 0;
-	core_Scene.call(this);
-};
-$hxClasses["game.scenes.PaceScene"] = game_scenes_PaceScene;
-game_scenes_PaceScene.__name__ = "game.scenes.PaceScene";
-game_scenes_PaceScene.__super__ = core_Scene;
-game_scenes_PaceScene.prototype = $extend(core_Scene.prototype,{
-	image: null
-	,mask: null
-	,noise: null
-	,maskId: null
-	,noiseId: null
-	,timeId: null
-	,pipeline: null
-	,oldPipeline: null
-	,time: null
-	,noiseItems: null
-	,create: function() {
-		this.image = kha_Image.createRenderTarget(320,180);
-		var shader = new core_ImageShader(kha_Shaders.pipeline_vert,kha_Shaders.pipeline_frag);
-		this.mask = kha_Image.createRenderTarget(320,180);
-		this.noise = kha_Image.createRenderTarget(320,180);
-		this.timeId = shader.pipeline.getConstantLocation("uTime");
-		this.noiseId = shader.pipeline.getTextureUnit("noise");
-		this.maskId = shader.pipeline.getTextureUnit("mask");
-		this.pipeline = shader.pipeline;
-		this.oldPipeline = this.image.get_g2().get_pipeline();
-		var _g = 0;
-		while(_g < 25) {
-			var _ = _g++;
-			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),0));
-		}
-		var _g = 0;
-		while(_g < 33) {
-			var _ = _g++;
-			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),1));
-		}
-		var _g = 0;
-		while(_g < 25) {
-			var _ = _g++;
-			this.addSprite(new game_scenes_Star(Math.round(Math.random() * 512),Math.round(Math.random() * 512),2));
-		}
-		this.addSprite(new game_scenes_ShootingStar());
-		var _g = 0;
-		while(_g < 25) {
-			var _ = _g++;
-			this.addSprite(new game_scenes_RotatingBar(Math.round(Math.random() * 1024),Math.round(Math.random() * 1024),0));
-		}
-		var _g = 0;
-		while(_g < 25) {
-			var _ = _g++;
-			this.addSprite(new game_scenes_RotatingBar(Math.round(Math.random() * 2048),Math.round(Math.random() * 2048),0));
-		}
-		var item = new core_IntVec2(0,0);
-		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
-		noise.alpha = 0.5;
-		noise.scrollFactor.set(0,0);
-		this.noiseItems.push(noise);
-		var item = new core_IntVec2(-512,0);
-		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
-		noise.alpha = 0.5;
-		noise.scrollFactor.set(0,0);
-		this.noiseItems.push(noise);
-		var item = new core_IntVec2(0,-512);
-		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
-		noise.alpha = 0.5;
-		noise.scrollFactor.set(0,0);
-		this.noiseItems.push(noise);
-		var item = new core_IntVec2(-512,-512);
-		var noise = new core_Sprite(item.toVec2(),kha_Assets.images.noise2);
-		noise.alpha = 0.5;
-		noise.scrollFactor.set(0,0);
-		this.noiseItems.push(noise);
-	}
-	,update: function(delta) {
-		core_Scene.prototype.update.call(this,delta);
-		this.time += delta;
-		var _g = 0;
-		var _g1 = this.noiseItems;
-		while(_g < _g1.length) {
-			var n = _g1[_g];
-			++_g;
-			n.x++;
-			n.y++;
-			if(n.x == 512) {
-				n.x -= 1024;
-			}
-			if(n.y == 512) {
-				n.y -= 1024;
-			}
-		}
-	}
-	,render: function(g2,g4,clears) {
-		this.image.get_g2().begin(clears,this.camera.bgColor);
-		var _g = 0;
-		var _g1 = this.sprites;
-		while(_g < _g1.length) {
-			var sprite = _g1[_g];
-			++_g;
-			if(sprite.depth > 1000) {
-				sprite.render(this.image.get_g2(),this.camera);
-			}
-		}
-		this.image.get_g2().end();
-		this.mask.get_g2().begin(true,0);
-		var _g = 0;
-		var _g1 = this.sprites;
-		while(_g < _g1.length) {
-			var s = _g1[_g];
-			++_g;
-			if(s.depth == 1000) {
-				s.render(this.mask.get_g2(),this.camera);
-			}
-		}
-		this.mask.get_g2().end();
-		this.noise.get_g2().begin();
-		var _g = 0;
-		var _g1 = this.noiseItems;
-		while(_g < _g1.length) {
-			var n = _g1[_g];
-			++_g;
-			n.render(this.noise.get_g2(),this.camera);
-		}
-		this.noise.get_g2().end();
-		g4.begin();
-		g4.setPipeline(this.pipeline);
-		g4.setTexture(this.maskId,this.mask);
-		g4.setTexture(this.noiseId,this.noise);
-		g4.setFloat(this.timeId,this.time);
-		g4.end();
-		g2.begin();
-		g2.set_pipeline(this.pipeline);
-		g2.drawImage(this.image,0,0);
-		g2.set_pipeline(this.oldPipeline);
-		var _g = 0;
-		var _g1 = this.sprites;
-		while(_g < _g1.length) {
-			var sprite = _g1[_g];
-			++_g;
-			if(sprite.depth < 1000) {
-				sprite.render(this.image.get_g2(),this.camera);
-			}
-		}
-		g2.end();
-	}
-	,__class__: game_scenes_PaceScene
-});
 var game_scenes_RaceScene = function() {
 	this.resultTexts = [];
 	this.pInputs = [];
@@ -34927,14 +34985,12 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		this.playerIndex = game_conn_Connection.inst.isHost ? 0 : 1;
 		this.rollback = new game_rollback_Rollback(this.playerIndex,this.worldGroup,game_rollback_FrameInput_blankInput(),($_=this.worldGroup,$bind($_,$_.updateWithInputs)),($_=this.worldGroup,$bind($_,$_.unserialize)));
 		game_conn_Connection.inst.addListeners(function() {
-			haxe_Log.trace("Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 97, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 98, className : "game.scenes.RaceScene", methodName : "create"});
 		},function() {
-			haxe_Log.trace("Disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 98, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 99, className : "game.scenes.RaceScene", methodName : "create"});
 		},function() {
-			haxe_Log.trace("Peer Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 99, className : "game.scenes.RaceScene", methodName : "create"});
-		},function(message) {
-			haxe_Log.trace("Peer disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 100, className : "game.scenes.RaceScene", methodName : "create", customParams : [message]});
-		},($_=this.rollback,$bind($_,$_.handleRemoteInput)));
+			haxe_Log.trace("Peer Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 100, className : "game.scenes.RaceScene", methodName : "create"});
+		},$bind(this,this.handleDisconnect),($_=this.rollback,$bind($_,$_.handleRemoteInput)));
 		this.camera.startFollow(this.worldGroup.ships[this.playerIndex]);
 		var pos = this.worldGroup.ships[this.playerIndex].getMidpoint();
 		var pointer = new game_objects_Pointer(pos.x - 4,pos.y - 12);
@@ -34956,9 +35012,6 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		}
 		if(this.game.keys.anyPressed([83,40])) {
 			pInput += 8;
-		}
-		if(this.playerIndex == 0) {
-			pInput = game_data_State_testInputs[this.worldGroup.frame + 300 + 1];
 		}
 		if(this.state == game_scenes_RaceState.Racing) {
 			this.pInputs.push(pInput);
@@ -34996,18 +35049,25 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		this.haltedText.text = "halted: " + Std.string(this.rollback.isHalted);
 	}
 	,onCrash: function(ship) {
-		haxe_Log.trace("ship crashed",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 186, className : "game.scenes.RaceScene", methodName : "onCrash"});
+		haxe_Log.trace("ship crashed",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 187, className : "game.scenes.RaceScene", methodName : "onCrash"});
 	}
 	,onFinish: function(ship) {
-		haxe_Log.trace("ship finished",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 194, className : "game.scenes.RaceScene", methodName : "onFinish"});
+		haxe_Log.trace("ship finished",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 195, className : "game.scenes.RaceScene", methodName : "onFinish"});
 		var text = (ship == this.worldGroup.ships[this.playerIndex] ? "You" : "Opp") + (": " + game_ui_TextUtil_formatTime(game_groups_WorldGroup_DELTA * ship.finishFrame));
 		var resultSprite = game_ui_UiText_makeOutlineText(0,this.timeText.y + 10 + this.resultTexts.length * 10 | 0,text);
 		resultSprite.x = 316 - resultSprite.textWidth;
 		this.resultTexts.push(resultSprite);
 		this.addSprite(resultSprite);
 		if(ship == this.worldGroup.ships[this.playerIndex]) {
-			haxe_Log.trace(this.pInputs,{ fileName : "game/scenes/RaceScene.hx", lineNumber : 208, className : "game.scenes.RaceScene", methodName : "onFinish"});
+			haxe_Log.trace(this.pInputs,{ fileName : "game/scenes/RaceScene.hx", lineNumber : 209, className : "game.scenes.RaceScene", methodName : "onFinish"});
 		}
+	}
+	,handleDisconnect: function(message) {
+		var _gthis = this;
+		this.timers.addTimer(new core_Timer(3.0,function() {
+			haxe_Log.trace("disconnect message",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 215, className : "game.scenes.RaceScene", methodName : "handleDisconnect", customParams : [message]});
+			_gthis.game.switchScene(new game_scenes_FailScene("Disconnected. Sorry!"));
+		}));
 	}
 	,makeStartText: function() {
 		var startText = game_ui_UiText_makeText(0,60,"Start!",-1,true);
@@ -35293,6 +35353,19 @@ game_ui_UiText.__name__ = "game.ui.UiText";
 var game_util_Debug = function() { };
 $hxClasses["game.util.Debug"] = game_util_Debug;
 game_util_Debug.__name__ = "game.util.Debug";
+var game_util_Logger = function() { };
+$hxClasses["game.util.Logger"] = game_util_Logger;
+game_util_Logger.__name__ = "game.util.Logger";
+game_util_Logger.debug = function(m1,m2,m3) {
+	if(game_util_Logger.level <= 0) {
+		haxe_Log.trace(m1,{ fileName : "game/util/Logger.hx", lineNumber : 8, className : "game.util.Logger", methodName : "debug", customParams : [m2,m3]});
+	}
+};
+game_util_Logger.log = function(m1,m2,m3) {
+	if(game_util_Logger.level <= 1) {
+		haxe_Log.trace(m1,{ fileName : "game/util/Logger.hx", lineNumber : 14, className : "game.util.Logger", methodName : "log", customParams : [m2,m3]});
+	}
+};
 function game_util_Utils_raytrace(x0,y0,x1,y1,respectOrder) {
 	if(respectOrder == null) {
 		respectOrder = false;
@@ -68801,6 +68874,7 @@ game_objects_Ship.ACCEL = 150.0;
 game_objects_Ship.DRAG = 150.0;
 game_rollback_Rollback.INPUT_DELAY_FRAMES = 0;
 var game_rollback_Rollback_frameModulos = [10000,144,89,55,34,21,13,8,5,3];
+game_scenes_PaceScene.initialized = false;
 game_scenes_RaceScene.DELAY_START = 300;
 game_ui_Colors.LIGHT_RED = -2533533;
 game_ui_Colors.DARK_RED = -5492174;
@@ -68816,6 +68890,7 @@ game_ui_Colors.GREY = -9868694;
 game_ui_UiText.font = game_ui_UiText_getFont();
 game_ui_UiText.outlineFont = game_ui_UiText_getOutlineFont();
 game_util_Debug.on = false;
+game_util_Logger.level = 1;
 haxe_Serializer.USE_CACHE = false;
 haxe_Serializer.USE_ENUM_INDEX = false;
 haxe_Serializer.BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789%:";
