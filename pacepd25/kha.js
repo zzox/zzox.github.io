@@ -2583,6 +2583,49 @@ core_ScalerExp.getPixelPerfectScale = function(source,destination) {
 	}
 	return scale;
 };
+var core_Sound = function() { };
+$hxClasses["core.Sound"] = core_Sound;
+core_Sound.__name__ = "core.Sound";
+core_Sound.play = function(sound,volume,loop) {
+	if(loop == null) {
+		loop = false;
+	}
+	if(volume == null) {
+		volume = 1.0;
+	}
+	var channel = kha_audio2_Audio1.play(sound,loop);
+	if(channel != null) {
+		channel.set_volume(volume);
+		return channel;
+	}
+	return null;
+};
+core_Sound.load = function(sound,volume,loop) {
+	if(loop == null) {
+		loop = false;
+	}
+	if(volume == null) {
+		volume = 1.0;
+	}
+	var channel = kha_audio2_Audio1.play(sound,loop);
+	channel.set_volume(volume);
+	channel.pause();
+	return channel;
+};
+core_Sound.stream = function(sound,volume,loop) {
+	if(loop == null) {
+		loop = false;
+	}
+	if(volume == null) {
+		volume = 1.0;
+	}
+	var channel = sound.uncompressedData == null ? kha_audio2_Audio1.stream(sound,loop) : kha_audio2_Audio1.play(sound,loop);
+	if(channel == null) {
+		throw haxe_Exception.thrown("Cannot stream");
+	}
+	channel.set_volume(volume);
+	return channel;
+};
 var core_SpriteType = $hxEnums["core.SpriteType"] = { __ename__:"core.SpriteType",__constructs__:null
 	,None: {_hx_name:"None",_hx_index:0,__enum__:"core.SpriteType",toString:$estr}
 	,Image: {_hx_name:"Image",_hx_index:1,__enum__:"core.SpriteType",toString:$estr}
@@ -33138,7 +33181,9 @@ var game_conn_Connection = function() { };
 $hxClasses["game.conn.Connection"] = game_conn_Connection;
 game_conn_Connection.__name__ = "game.conn.Connection";
 game_conn_Connection.init = function() {
-	game_conn_Connection.inst = new game_conn_Conn();
+	if(game_conn_Connection.inst == null) {
+		game_conn_Connection.inst = new game_conn_Conn();
+	}
 	game_conn_Connection.inst.init(function() {
 	},function() {
 	},function() {
@@ -33176,6 +33221,7 @@ game_conn_Conn.__name__ = "game.conn.Conn";
 game_conn_Conn.prototype = {
 	ws: null
 	,rtc: null
+	,vs: null
 	,socketConnectState: null
 	,onServerConnect: null
 	,onServerDisconnect: null
@@ -33185,13 +33231,14 @@ game_conn_Conn.prototype = {
 	,onPeerDisconnect: null
 	,roomId: null
 	,onRemoteInput: null
+	,onVsEvent: null
 	,pingTime: null
 	,pingTimes: null
 	,lastPingTime: null
 	,init: function(onServerConnect,onServerDisconnect,onPeerConnect,onPeerDisconnect,onRemoteInput) {
 		var _gthis = this;
 		if(this.socketConnectState != game_conn_SocketConnectionState.SCOffline || this.peerConnectState != game_conn_PeerConnectionState.PCOffline) {
-			haxe_Log.trace("connection already exists!",{ fileName : "game/conn/Connection.hx", lineNumber : 83, className : "game.conn.Conn", methodName : "init"});
+			haxe_Log.trace("connection already exists!",{ fileName : "game/conn/Connection.hx", lineNumber : 92, className : "game.conn.Conn", methodName : "init"});
 			return;
 		}
 		this.onServerConnect = onServerConnect;
@@ -33206,15 +33253,8 @@ game_conn_Conn.prototype = {
 			_gthis.socketConnectState = game_conn_SocketConnectionState.SCOffline;
 			_gthis.onServerDisconnect();
 		},$bind(this,this.handleWebsocketMessage));
-		this.rtc = new game_conn_Rtc($bind(this,this.handleIceCandidate),$bind(this,this.handlePeerMessage),function() {
-			_gthis.startPing();
-			_gthis.onPeerConnect();
-		},function() {
-			_gthis.peerConnectState = game_conn_PeerConnectionState.PCOffline;
-			_gthis.onPeerDisconnect("datachannel closed");
-		});
 	}
-	,addListeners: function(onServerConnect,onServerDisconnect,onPeerConnect,onPeerDisconnect,onRemoteInput) {
+	,addListeners: function(onServerConnect,onServerDisconnect,onPeerConnect,onPeerDisconnect,onRemoteInput,onVsEvent) {
 		if(onServerConnect != null) {
 			this.onServerConnect = onServerConnect;
 		}
@@ -33230,9 +33270,12 @@ game_conn_Conn.prototype = {
 		if(onRemoteInput != null) {
 			this.onRemoteInput = onRemoteInput;
 		}
+		if(onVsEvent != null) {
+			this.onVsEvent = onVsEvent;
+		}
 	}
-	,sendInput: function(index,input) {
-		this.rtc.sendMessage("remote-input",{ index : index, input : input});
+	,sendInput: function(index,input,gameId) {
+		this.rtc.sendMessage("remote-input",{ gameId : gameId, index : index, input : input});
 	}
 	,handlePeerMessage: function(message) {
 		var type = message.type;
@@ -33242,7 +33285,7 @@ game_conn_Conn.prototype = {
 			if(this.peerConnectState == game_conn_PeerConnectionState.PCConnecting) {
 				this.rtc.sendMessage("confirm-ack");
 				this.peerConnectState = game_conn_PeerConnectionState.PCConnected;
-				this.onPeerConnect();
+				this.handlePeerConnect();
 			} else {
 				throw haxe_Exception.thrown("confirm while not connecting");
 			}
@@ -33250,8 +33293,15 @@ game_conn_Conn.prototype = {
 		case "confirm-ack":
 			if(this.peerConnectState == game_conn_PeerConnectionState.PCConnecting) {
 				this.peerConnectState = game_conn_PeerConnectionState.PCConnected;
-				this.onPeerConnect();
+				this.handlePeerConnect();
 			}
+			break;
+		case "leaving":
+			this.onVsEvent(game_conn_VsEvent.Leaving);
+			break;
+		case "next-ready":
+			this.vs.waitingForNext = true;
+			this.onVsEvent(game_conn_VsEvent.NextReady);
 			break;
 		case "ping":
 			this.rtc.sendMessage("pong");
@@ -33264,7 +33314,11 @@ game_conn_Conn.prototype = {
 			},0) / this.pingTimes.length);
 			break;
 		case "remote-input":
-			this.onRemoteInput({ index : payload.index, input : payload.input});
+			this.onRemoteInput({ index : payload.index, input : payload.input, gameId : payload.gameId});
+			break;
+		case "start-ready":
+			this.vs.waitingForStart = true;
+			this.onVsEvent(game_conn_VsEvent.StartReady);
 			break;
 		default:
 			game_util_Logger.debug("unhandled peer message",type,payload);
@@ -33282,27 +33336,48 @@ game_conn_Conn.prototype = {
 	}
 	,joinOrCreateRoom: function() {
 		if(this.roomId == null) {
+			this.createRtcConnection();
 			this.sendWsMessage("join-or-create");
 		} else {
-			haxe_Log.trace("already in room",{ fileName : "game/conn/Connection.hx", lineNumber : 187, className : "game.conn.Conn", methodName : "joinOrCreateRoom"});
+			haxe_Log.trace("already in room",{ fileName : "game/conn/Connection.hx", lineNumber : 194, className : "game.conn.Conn", methodName : "joinOrCreateRoom"});
 		}
 	}
-	,createRoom: function() {
-		throw haxe_Exception.thrown("Dont use this.");
-	}
-	,joinAnyRoom: function() {
-		throw haxe_Exception.thrown("Dont use this.");
+	,leaveRoom: function() {
+		this.roomId = null;
+		this.rtc.disconnect();
+		this.rtc = null;
+		this.peerConnectState = game_conn_PeerConnectionState.PCOffline;
+		this.sendWsMessage("leave-room");
+		this.vs = null;
+		this.onVsEvent = null;
 	}
 	,sendWsMessage: function(type,payload) {
 		if(this.socketConnectState != game_conn_SocketConnectionState.SCConnected) {
-			haxe_Log.trace("not connected",{ fileName : "game/conn/Connection.hx", lineNumber : 213, className : "game.conn.Conn", methodName : "sendWsMessage"});
+			haxe_Log.trace("not connected",{ fileName : "game/conn/Connection.hx", lineNumber : 211, className : "game.conn.Conn", methodName : "sendWsMessage"});
 			return;
 		}
 		if(this.ws == null) {
-			haxe_Log.trace("Websocket not initialized",{ fileName : "game/conn/Connection.hx", lineNumber : 218, className : "game.conn.Conn", methodName : "sendWsMessage"});
+			haxe_Log.trace("Websocket not initialized",{ fileName : "game/conn/Connection.hx", lineNumber : 216, className : "game.conn.Conn", methodName : "sendWsMessage"});
 			return;
 		}
 		this.ws.send({ type : type, payload : payload});
+	}
+	,handlePeerConnect: function() {
+		this.vs = new game_conn_Vs();
+		this.onPeerConnect();
+	}
+	,sendVsEvent: function(event) {
+		switch(event._hx_index) {
+		case 0:
+			this.rtc.sendMessage("start-ready");
+			break;
+		case 1:
+			this.rtc.sendMessage("next-ready");
+			break;
+		case 2:
+			this.rtc.sendMessage("leaving");
+			break;
+		}
 	}
 	,handleWebsocketMessage: function(message) {
 		var payload = message.payload;
@@ -33342,6 +33417,16 @@ game_conn_Conn.prototype = {
 			game_util_Logger.debug("unhandled message",type,payload);
 		}
 	}
+	,createRtcConnection: function() {
+		var _gthis = this;
+		this.rtc = new game_conn_Rtc($bind(this,this.handleIceCandidate),$bind(this,this.handlePeerMessage),function() {
+			_gthis.startPing();
+			_gthis.onPeerConnect();
+		},function() {
+			_gthis.peerConnectState = game_conn_PeerConnectionState.PCOffline;
+			_gthis.onPeerDisconnect("datachannel closed");
+		});
+	}
 	,onOfferGenerated: function(offer) {
 		this.sendWsMessage("sdp-offer",{ roomId : this.roomId, offer : offer});
 	}
@@ -33350,6 +33435,12 @@ game_conn_Conn.prototype = {
 	}
 	,handleIceCandidate: function(candidate) {
 		this.sendWsMessage("ice-candidate",{ roomId : this.roomId, candidate : candidate});
+	}
+	,createRoom: function() {
+		throw haxe_Exception.thrown("Dont use this.");
+	}
+	,joinAnyRoom: function() {
+		throw haxe_Exception.thrown("Dont use this.");
 	}
 	,__class__: game_conn_Conn
 };
@@ -33432,7 +33523,31 @@ game_conn_Rtc.prototype = {
 	,addIceCandidate: function(candidate) {
 		this.pc.addIceCandidate(new RTCIceCandidate(candidate));
 	}
+	,disconnect: function() {
+		this.pc.close();
+	}
 	,__class__: game_conn_Rtc
+};
+var game_conn_VsEvent = $hxEnums["game.conn.VsEvent"] = { __ename__:"game.conn.VsEvent",__constructs__:null
+	,StartReady: {_hx_name:"StartReady",_hx_index:0,__enum__:"game.conn.VsEvent",toString:$estr}
+	,NextReady: {_hx_name:"NextReady",_hx_index:1,__enum__:"game.conn.VsEvent",toString:$estr}
+	,Leaving: {_hx_name:"Leaving",_hx_index:2,__enum__:"game.conn.VsEvent",toString:$estr}
+};
+game_conn_VsEvent.__constructs__ = [game_conn_VsEvent.StartReady,game_conn_VsEvent.NextReady,game_conn_VsEvent.Leaving];
+var game_conn_Vs = function() {
+	this.wins = 0;
+	this.losses = 0;
+	this.waitingForNext = false;
+	this.waitingForStart = false;
+};
+$hxClasses["game.conn.Vs"] = game_conn_Vs;
+game_conn_Vs.__name__ = "game.conn.Vs";
+game_conn_Vs.prototype = {
+	waitingForStart: null
+	,waitingForNext: null
+	,losses: null
+	,wins: null
+	,__class__: game_conn_Vs
 };
 var game_conn_Ws = function(url,onOpen,onClose,onMessage) {
 	this.isOpen = false;
@@ -33526,7 +33641,8 @@ game_data_State.SECRETclearBests = function() {
 game_data_State.prototype = {
 	__class__: game_data_State
 };
-var game_groups_Emitter = function() {
+var game_groups_Emitter = function(children) {
+	this.volume = 0.0;
 	this.xPos = 0.0;
 	this.yPos = 0.0;
 	this.isBraking = false;
@@ -33535,13 +33651,17 @@ var game_groups_Emitter = function() {
 	this.emitTime = 0.0;
 	this.emitting = false;
 	this.emitSpeed = 0.2;
-	core_Group.call(this);
+	this.brakeSfx = [kha_Assets.sounds.brake01,kha_Assets.sounds.brake02,kha_Assets.sounds.brake03,kha_Assets.sounds.brake04,kha_Assets.sounds.brake05,kha_Assets.sounds.brake06,kha_Assets.sounds.brake07,kha_Assets.sounds.brake08,kha_Assets.sounds.brake09,kha_Assets.sounds.brake10,kha_Assets.sounds.brake11];
+	this.accelSfx = [kha_Assets.sounds.accel01,kha_Assets.sounds.accel02,kha_Assets.sounds.accel03,kha_Assets.sounds.accel04,kha_Assets.sounds.accel05,kha_Assets.sounds.accel06,kha_Assets.sounds.accel07,kha_Assets.sounds.accel08,kha_Assets.sounds.accel09,kha_Assets.sounds.accel10,kha_Assets.sounds.accel11];
+	core_Group.call(this,children);
 };
 $hxClasses["game.groups.Emitter"] = game_groups_Emitter;
 game_groups_Emitter.__name__ = "game.groups.Emitter";
 game_groups_Emitter.__super__ = core_Group;
 game_groups_Emitter.prototype = $extend(core_Group.prototype,{
-	emitSpeed: null
+	accelSfx: null
+	,brakeSfx: null
+	,emitSpeed: null
 	,emitting: null
 	,emitTime: null
 	,movingAngle: null
@@ -33549,6 +33669,7 @@ game_groups_Emitter.prototype = $extend(core_Group.prototype,{
 	,isBraking: null
 	,yPos: null
 	,xPos: null
+	,volume: null
 	,update: function(delta) {
 		core_Group.prototype.update.call(this,delta);
 		if(this.emitting) {
@@ -33558,6 +33679,10 @@ game_groups_Emitter.prototype = $extend(core_Group.prototype,{
 				var particle = js_Boot.__cast(this.getNext() , game_groups_LineParticle);
 				particle.startParticle(this.xPos,this.yPos,this.movingAngle,this.vel,this.isBraking);
 				this.scene.tweens.addTween(particle.sizeTween);
+				var index = core_Util_intClamp(Math.floor(this.vel),0,this.accelSfx.length - 1);
+				if(this.volume > 0.0) {
+					core_Sound.play(this.isBraking ? this.brakeSfx[index] : this.accelSfx[index],this.volume * (0.1 + core_Util_clamp(this.vel * .1,0.0,0.2)));
+				}
 			}
 		}
 	}
@@ -33614,6 +33739,7 @@ game_rollback_ISerialize.prototype = {
 	,__class__: game_rollback_ISerialize
 };
 var game_groups_WorldGroup = function(tilemap,minimapSize,numActors,handleCrash,handleFinish,isMultiplayer) {
+	this.indexForSecondSound = -1;
 	this.particleSprites = [];
 	this.particles = [];
 	this.shipBodies = [];
@@ -33623,6 +33749,7 @@ var game_groups_WorldGroup = function(tilemap,minimapSize,numActors,handleCrash,
 	this.finishFrames = [];
 	this.crashes = [];
 	this.ships = [];
+	this.startPlucks = [kha_Assets.sounds.pace_sting1,kha_Assets.sounds.pace_sting2,kha_Assets.sounds.pace_sting3,kha_Assets.sounds.pace_sting4,kha_Assets.sounds.pace_sting5,kha_Assets.sounds.pace_sting6,kha_Assets.sounds.pace_sting7,kha_Assets.sounds.pace_sting8,kha_Assets.sounds.pace_sting9];
 	core_Group.call(this);
 	this.world = new echo_World({ width : 2048, height : 2048, iterations : 2});
 	var _g = 0;
@@ -33724,7 +33851,8 @@ game_groups_WorldGroup.__name__ = "game.groups.WorldGroup";
 game_groups_WorldGroup.__interfaces__ = [game_rollback_ISerialize];
 game_groups_WorldGroup.__super__ = core_Group;
 game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
-	ships: null
+	startPlucks: null
+	,ships: null
 	,crashes: null
 	,finishFrames: null
 	,finishBox: null
@@ -33739,6 +33867,8 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 	,startPositions: null
 	,handleCrash: null
 	,handleFinish: null
+	,indexForSound: null
+	,indexForSecondSound: null
 	,update: function(delta) {
 	}
 	,updateWithInputs: function(delta,inputs,confirmFrame) {
@@ -33752,6 +33882,9 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		}
 		if(this.frame < 0) {
 			return this;
+		}
+		if(this.frame == 0) {
+			core_Sound.play(this.startPlucks[Math.floor(Math.random() * this.startPlucks.length)],0.2);
 		}
 		var _g = 0;
 		var _g1 = this.particleSprites;
@@ -33767,6 +33900,12 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		}
 		core_Group.prototype.update.call(this,delta);
 		echo_Echo.step(this.world,delta);
+		if(this.ships[this.indexForSound] != null) {
+			this.ships[this.indexForSound].emitter.volume = 1.0;
+		}
+		if(this.ships[this.indexForSecondSound] != null) {
+			this.ships[this.indexForSecondSound].emitter.volume = this.getShipVolume(this.ships[this.indexForSecondSound]);
+		}
 		var _g = 0;
 		var _g1 = this.ships.length;
 		while(_g < _g1) {
@@ -33784,6 +33923,24 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 			if(this.isMultiplayer && this.ships[i].health <= 0) {
 				var fh = this.ships[i];
 				fh.crashFrame++;
+				var _this = this.ships[i].echoBody;
+				var _this1 = _this.transform;
+				if(!_this1.dirty) {
+					_this1.set_dirty();
+				}
+				_this1.local_x = -8;
+				if(_this.on_move != null) {
+					_this.on_move(_this.transform.local_x,_this.transform.local_y);
+				}
+				var _this2 = this.ships[i].echoBody;
+				var _this3 = _this2.transform;
+				if(!_this3.dirty) {
+					_this3.set_dirty();
+				}
+				_this3.local_y = -8;
+				if(_this2.on_move != null) {
+					_this2.on_move(_this2.transform.local_x,_this2.transform.local_y);
+				}
 			}
 			if(this.ships[i].crashFrame == 120) {
 				this.resetShip(i);
@@ -33841,6 +33998,7 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		if(s2 == null) {
 			throw haxe_Exception.thrown("cant find ship on collision");
 		}
+		core_Sound.play(kha_Assets.sounds.pace_hit3,0.3);
 		var damage = s1.vel / game_groups_WorldGroup_DELTA - core_Util_distanceBetween2(0,0,s1Body.velocity.x,s1Body.velocity.y);
 		var _g = 0;
 		var _g1 = [s1,s2];
@@ -33899,6 +34057,11 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		}
 		var damage = ship.vel / game_groups_WorldGroup_DELTA - core_Util_distanceBetween2(0,0,sBody.velocity.x,sBody.velocity.y);
 		ship.health -= core_Util_clamp(damage,0,ship.health);
+		var hitVolume = this.getShipVolume(ship) * core_Util_clamp(damage / 50,0.0,1.0);
+		if(hitVolume > 0) {
+			haxe_Log.trace(hitVolume,{ fileName : "game/groups/WorldGroup.hx", lineNumber : 371, className : "game.groups.WorldGroup", methodName : "shipCollision"});
+			core_Sound.play(damage > 50 ? kha_Assets.sounds.pace_hit1 : kha_Assets.sounds.pace_hit2);
+		}
 		var numParticles = 4;
 		if(damage > 100) {
 			numParticles = 7;
@@ -33943,20 +34106,21 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		this.world.remove(ship.echoBody);
 	}
 	,shipCrash: function(ship) {
-		this.destroyShipSprite(ship);
+		this.destroyShipSprite(ship,true);
 		if(!this.isMultiplayer) {
 			this.killShipListeners(ship);
 			this.handleCrash(ship);
 		}
+		core_Sound.play(kha_Assets.sounds.destroy,0.5 * this.getShipVolume(ship));
 	}
-	,destroyShipSprite: function(ship) {
+	,destroyShipSprite: function(ship,fanOut) {
 		var shipParticles = [new game_objects_ShipParticle(ship.echoBody.transform.local_x,ship.echoBody.transform.local_y,true),new game_objects_ShipParticle(ship.echoBody.transform.local_x,ship.echoBody.transform.local_y,true),new game_objects_ShipParticle(ship.echoBody.transform.local_x,ship.echoBody.transform.local_y,false),new game_objects_ShipParticle(ship.echoBody.transform.local_x,ship.echoBody.transform.local_y,false)];
 		var _g = 0;
 		while(_g < shipParticles.length) {
 			var sp = shipParticles[_g];
 			++_g;
 			this.world.add(sp.echoBody);
-			var newAngle = ship.movingAngle - 45 + Math.random() * 90;
+			var newAngle = fanOut ? ship.movingAngle - 45 + Math.random() * 90 : ship.movingAngle - 22.5 + Math.random() * 45;
 			var newVel = core_Util_velocityFromAngle(newAngle,ship.vel * 60);
 			var v = sp.echoBody.velocity;
 			v.x = newVel.x;
@@ -33985,9 +34149,10 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 		ship.finishFrame = this.frame;
 	}
 	,shipFinish: function(ship) {
-		this.destroyShipSprite(ship);
+		this.destroyShipSprite(ship,false);
 		this.killShipListeners(ship);
 		this.handleFinish(ship);
+		core_Sound.play(kha_Assets.sounds.finish,0.5 * this.getShipVolume(ship));
 	}
 	,getShipFromBody: function(body) {
 		var _g = [];
@@ -34001,6 +34166,15 @@ game_groups_WorldGroup.prototype = $extend(core_Group.prototype,{
 			}
 		}
 		return _g[0];
+	}
+	,getShipVolume: function(ship) {
+		if(this.ships[this.indexForSound] == ship) {
+			return 1;
+		}
+		if(this.ships[this.indexForSecondSound] == ship) {
+			return core_Util_clamp((300 - core_Util_distanceBetween2(this.ships[this.indexForSound].echoBody.transform.local_x,this.ships[this.indexForSound].echoBody.transform.local_y,this.ships[this.indexForSecondSound].echoBody.transform.local_x,this.ships[this.indexForSecondSound].echoBody.transform.local_y)) / 300,0.0,1.0);
+		}
+		return 0;
 	}
 	,serialize: function() {
 		var tmp = this.frame;
@@ -34227,7 +34401,7 @@ game_objects_Ship.prototype = $extend(core_Sprite.prototype,{
 		this.flickerFrame--;
 		if(this.hurtFrame > 0 && Math.floor(this.hurtFrame / 4) % 2 == 0) {
 			this.color = -2533533;
-		} else if(this.flickerFrame > 0 && Math.floor(this.hurtFrame / 4) % 2 == 0) {
+		} else if(this.flickerFrame > 0 && Math.floor(this.flickerFrame / 8) % 2 == 0) {
 			this.color = -2133722;
 		} else {
 			this.color = -1;
@@ -34341,7 +34515,7 @@ function game_rollback_FrameInput_compareInput(input1,input2) {
 function game_rollback_FrameInput_blankInput() {
 	return 0;
 }
-var game_rollback_Rollback = function(playerIndex,initialState,blankFrame,onSimulateInput,onRollbackState) {
+var game_rollback_Rollback = function(gameId,playerIndex,initialState,blankFrame,onSimulateInput,onRollbackState) {
 	this.rollbacksDone = 0;
 	this.isHalted = false;
 	this.localInputs = [];
@@ -34352,11 +34526,19 @@ var game_rollback_Rollback = function(playerIndex,initialState,blankFrame,onSimu
 	this.onSimulateInput = onSimulateInput;
 	this.onRollbackState = onRollbackState;
 	this.frames.push({ frameNumber : 0, input : [blankFrame,blankFrame], state : initialState.serialize()});
+	this.localInputs.push(blankFrame);
+	this.futureRemotes.push({ index : 1, input : blankFrame, gameId : gameId});
+	this.localInputs.push(blankFrame);
+	this.futureRemotes.push({ index : 2, input : blankFrame, gameId : gameId});
+	this.localInputs.push(blankFrame);
+	this.futureRemotes.push({ index : 3, input : blankFrame, gameId : gameId});
+	this.gameId = gameId;
 };
 $hxClasses["game.rollback.Rollback"] = game_rollback_Rollback;
 game_rollback_Rollback.__name__ = "game.rollback.Rollback";
 game_rollback_Rollback.prototype = {
-	playerIndex: null
+	gameId: null
+	,playerIndex: null
 	,currentFrame: null
 	,frames: null
 	,futureRemotes: null
@@ -34367,14 +34549,14 @@ game_rollback_Rollback.prototype = {
 	,onRollbackState: null
 	,tick: function(localInput,delta) {
 		if(this.frames.length > 10) {
-			haxe_Log.trace("should halt!!",{ fileName : "game/rollback/Rollback.hx", lineNumber : 68, className : "game.rollback.Rollback", methodName : "tick"});
+			haxe_Log.trace("should halt!!",{ fileName : "game/rollback/Rollback.hx", lineNumber : 72, className : "game.rollback.Rollback", methodName : "tick"});
 			this.isHalted = true;
 			return;
 		} else {
 			this.isHalted = false;
 		}
 		this.currentFrame++;
-		game_conn_Connection.inst.sendInput(this.currentFrame,localInput);
+		game_conn_Connection.inst.sendInput(this.currentFrame + 3,localInput,this.gameId);
 		this.localInputs.push(localInput);
 		var currentLocalInput = this.localInputs.shift();
 		var remoteInput;
@@ -34385,7 +34567,7 @@ game_rollback_Rollback.prototype = {
 			var fut = this.futureRemotes.shift();
 			remoteInput = fut.input;
 			if(this.currentFrame != fut.index) {
-				haxe_Log.trace(this.currentFrame,{ fileName : "game/rollback/Rollback.hx", lineNumber : 94, className : "game.rollback.Rollback", methodName : "tick", customParams : [fut.index]});
+				haxe_Log.trace(this.currentFrame,{ fileName : "game/rollback/Rollback.hx", lineNumber : 98, className : "game.rollback.Rollback", methodName : "tick", customParams : [fut.index]});
 				throw haxe_Exception.thrown("bad future");
 			}
 		} else {
@@ -34398,16 +34580,20 @@ game_rollback_Rollback.prototype = {
 		if(behind) {
 			this.removeCorrectFrames(this.currentFrame);
 			var framesBehind = this.futureRemotes.length;
-			var framesToSkip = game_rollback_Rollback_frameModulos[framesBehind];
+			var framesToSkip = game_rollback_Rollback_frameModulos[framesBehind - 3];
 			if(framesToSkip == null) {
 				framesToSkip = 2;
 			}
-			if(framesBehind > 0 && this.currentFrame % framesToSkip == 0) {
+			if(framesBehind > 3 && this.currentFrame % framesToSkip == 0) {
 				this.tick(localInput,delta);
 			}
 		}
 	}
 	,handleRemoteInput: function(remote) {
+		if(remote.gameId != this.gameId) {
+			haxe_Log.trace("bad remote",{ fileName : "game/rollback/Rollback.hx", lineNumber : 142, className : "game.rollback.Rollback", methodName : "handleRemoteInput", customParams : [remote]});
+			return;
+		}
 		var frame = this.getFrame(remote.index);
 		if(frame == null) {
 			this.futureRemotes.push(remote);
@@ -34432,7 +34618,7 @@ game_rollback_Rollback.prototype = {
 		}
 	}
 	,doRollback: function(toIndex,remoteInput) {
-		haxe_Log.trace("rolling back!",{ fileName : "game/rollback/Rollback.hx", lineNumber : 168, className : "game.rollback.Rollback", methodName : "doRollback"});
+		haxe_Log.trace("rolling back!",{ fileName : "game/rollback/Rollback.hx", lineNumber : 176, className : "game.rollback.Rollback", methodName : "doRollback"});
 		var goodState = this.frames[0].state;
 		this.onRollbackState(goodState);
 		var _g = 1;
@@ -34663,9 +34849,11 @@ game_scenes_LevelSelect.prototype = $extend(game_scenes_PaceScene.prototype,{
 	,update: function(delta) {
 		game_scenes_PaceScene.prototype.update.call(this,delta);
 		if(this.game.keys.anyJustPressed([87,38])) {
+			core_Sound.play(kha_Assets.sounds.selector);
 			this.index--;
 		}
 		if(this.game.keys.anyJustPressed([83,40])) {
+			core_Sound.play(kha_Assets.sounds.selector);
 			this.index++;
 		}
 		if(this.index == -1) {
@@ -34678,32 +34866,43 @@ game_scenes_LevelSelect.prototype = $extend(game_scenes_PaceScene.prototype,{
 		if(this.game.keys.anyJustPressed([32,13])) {
 			game_data_State.currentLevel = game_data_LevelData_levelOrder[this.index];
 			this.game.switchScene(new game_scenes_TrialScene());
+			core_Sound.play(kha_Assets.sounds.selector_up);
 		}
-		if(this.game.keys.justPressed(76)) {
-			this.game.switchScene(new game_scenes_LobbyScene());
+		if(this.game.keys.justPressed(27)) {
+			this.game.switchScene(new game_scenes_MainMenu());
+			core_Sound.play(kha_Assets.sounds.selector_down);
 		}
 	}
 	,__class__: game_scenes_LevelSelect
 });
 var game_scenes_LobbyScene = function() {
+	this.isJoining = false;
 	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.LobbyScene"] = game_scenes_LobbyScene;
 game_scenes_LobbyScene.__name__ = "game.scenes.LobbyScene";
 game_scenes_LobbyScene.__super__ = game_scenes_PaceScene;
 game_scenes_LobbyScene.prototype = $extend(game_scenes_PaceScene.prototype,{
-	statusText: null
+	isJoining: null
+	,statusText: null
 	,pingText: null
+	,onlineText: null
+	,messageText: null
+	,numUsers: null
 	,create: function() {
 		game_scenes_PaceScene.prototype.create.call(this);
 		game_conn_Connection.init();
-		game_conn_Connection.inst.addListeners(null,null,$bind(this,this.connected));
+		game_conn_Connection.inst.addListeners($bind(this,this.showOptions),null,$bind(this,this.connected));
 		this.addSprite(this.statusText = game_ui_UiText_makeText(2,160));
-		this.addSprite(this.pingText = game_ui_UiText_makeText(2,170));
+		this.addSprite(this.pingText = game_ui_UiText_makeText(2,2));
+		this.addSprite(this.onlineText = game_ui_UiText_makeText(320,170));
+		this.addSprite(this.messageText = game_ui_UiText_makeText(0,76));
+		this.runGetUsers();
 	}
 	,update: function(delta) {
 		game_scenes_PaceScene.prototype.update.call(this,delta);
 		var text = "offline";
+		var centerMessage = "";
 		var tmp = game_conn_Connection.inst.roomId;
 		var roomId = (tmp != null ? tmp : "").split("-")[0];
 		if(game_conn_Connection.inst.peerConnectState == game_conn_PeerConnectionState.PCConnecting) {
@@ -34715,49 +34914,133 @@ game_scenes_LobbyScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		} else if(game_conn_Connection.inst.socketConnectState == game_conn_SocketConnectionState.SCConnecting) {
 			text = "socket connecting";
 		} else if(game_conn_Connection.inst.socketConnectState == game_conn_SocketConnectionState.SCConnected) {
-			text = "socket connected (press space)";
+			text = "socket connected";
+			centerMessage = "Press space to play online";
 		}
 		this.statusText.setBitmapText(text);
+		this.messageText.setBitmapText(centerMessage);
+		this.messageText.x = 180 - Math.floor(this.messageText.textWidth / 2);
 		this.pingText.setBitmapText(game_conn_Connection.inst.pingTime != null ? "ping: " + game_conn_Connection.inst.pingTime + "ms" : "");
 		this.pingText.x = 318 - this.pingText.textWidth;
-		if(this.game.keys.anyJustPressed([32,13]) && game_conn_Connection.inst.socketConnectState == game_conn_SocketConnectionState.SCConnected) {
-			game_conn_Connection.inst.joinOrCreateRoom();
+		this.onlineText.setBitmapText(this.numUsers != null ? "" + this.numUsers + " online" : "");
+		this.onlineText.x = 318 - this.onlineText.textWidth;
+		if(this.game.keys.justPressed(27)) {
+			if(game_conn_Connection.inst.roomId != null) {
+				game_conn_Connection.inst.leaveRoom();
+			}
+			this.game.switchScene(new game_scenes_MainMenu());
 		}
+		if(this.game.keys.anyJustPressed([32,13]) && game_conn_Connection.inst.socketConnectState == game_conn_SocketConnectionState.SCConnected && !this.isJoining) {
+			this.tryJoin();
+		}
+	}
+	,showOptions: function() {
+		haxe_Log.trace("showing options",{ fileName : "game/scenes/LobbyScene.hx", lineNumber : 85, className : "game.scenes.LobbyScene", methodName : "showOptions"});
+	}
+	,tryJoin: function() {
+		this.isJoining = true;
+		game_conn_Connection.inst.joinOrCreateRoom();
 	}
 	,connected: function() {
 		var _gthis = this;
-		this.timers.addTimer(new core_Timer(1.0,function() {
+		this.timers.addTimer(new core_Timer(2.0,function() {
 			game_data_State.currentLevel = game_data_Level.DiamondMe;
 			_gthis.game.switchScene(new game_scenes_RaceScene());
+		}));
+	}
+	,runGetUsers: function() {
+		var _gthis = this;
+		var answer = new haxe_http_HttpJs("https://pacepd25-e2ef41da108c.herokuapp.com/");
+		answer.request();
+		answer.async = true;
+		answer.onData = function(answer) {
+			var json = JSON.parse(answer);
+			_gthis.numUsers = json.users.length;
+		};
+		answer.onError = function(msg) {
+			_gthis.numUsers = null;
+			haxe_Log.trace("offline",{ fileName : "game/scenes/LobbyScene.hx", lineNumber : 110, className : "game.scenes.LobbyScene", methodName : "runGetUsers", customParams : [msg]});
+		};
+		this.timers.addTimer(new core_Timer(15.0,function() {
+			_gthis.runGetUsers();
 		}));
 	}
 	,__class__: game_scenes_LobbyScene
 });
 var game_scenes_MainMenu = function() {
+	this.index = 0;
 	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.MainMenu"] = game_scenes_MainMenu;
 game_scenes_MainMenu.__name__ = "game.scenes.MainMenu";
 game_scenes_MainMenu.__super__ = game_scenes_PaceScene;
 game_scenes_MainMenu.prototype = $extend(game_scenes_PaceScene.prototype,{
-	create: function() {
+	pointer: null
+	,index: null
+	,create: function() {
+		var _gthis = this;
 		game_scenes_PaceScene.prototype.create.call(this);
 		this.addSprite(game_ui_UiText_makeText(0,64,"p   a   c   e",-1,true));
+		this.addSprite(this.pointer = new core_Sprite(new core_Vec2(132,-8),kha_Assets.images.pointer,new core_IntVec2(8,8)));
+		this.pointer.visible = false;
+		if(game_scenes_MainMenu.optionsVisible) {
+			this.makeOptionsVisible();
+		} else {
+			this.timers.addTimer(new core_Timer(3.0,function() {
+				if(!game_scenes_MainMenu.optionsVisible) {
+					_gthis.makeOptionsVisible();
+				}
+			}));
+		}
+		this.addSprite(game_ui_UiText_makeText(2,170,"v " + game_data_State.VERSION));
 	}
 	,update: function(delta) {
 		game_scenes_PaceScene.prototype.update.call(this,delta);
-		if(this.game.keys.anyJustPressed([32,13,27])) {
-			this.game.switchScene(new game_scenes_LevelSelect());
+		if(game_scenes_MainMenu.optionsVisible) {
+			if(this.game.keys.anyJustPressed([87,38])) {
+				core_Sound.play(kha_Assets.sounds.selector);
+				this.index--;
+			}
+			if(this.game.keys.anyJustPressed([83,40])) {
+				core_Sound.play(kha_Assets.sounds.selector);
+				this.index++;
+			}
 		}
+		if(this.index == -1) {
+			this.index = 1;
+		}
+		if(this.index == 2) {
+			this.index = 0;
+		}
+		this.pointer.y = 96 + this.index * 10;
+		if(this.game.keys.anyJustPressed([32,13])) {
+			if(game_scenes_MainMenu.optionsVisible) {
+				if(this.index == 0) {
+					this.game.switchScene(new game_scenes_LevelSelect());
+				} else {
+					this.game.switchScene(new game_scenes_LobbyScene());
+				}
+			} else {
+				this.makeOptionsVisible();
+			}
+			core_Sound.play(kha_Assets.sounds.selector_up);
+		}
+	}
+	,makeOptionsVisible: function() {
+		this.addSprite(game_ui_UiText_makeText(0,96,"Trials",-1,true));
+		this.addSprite(game_ui_UiText_makeText(0,106,"Vs Mode",-1,true));
+		this.pointer.visible = true;
+		game_scenes_MainMenu.optionsVisible = true;
 	}
 	,__class__: game_scenes_MainMenu
 });
-var game_scenes_OverScene = function(topText,subText,options) {
+var game_scenes_OverScene = function(topText,subText,options,countdownText) {
 	this.index = 0;
 	core_Scene.call(this);
 	this.topText = topText;
 	this.subText = subText;
 	this.options = options;
+	this.countdownText = countdownText;
 };
 $hxClasses["game.scenes.OverScene"] = game_scenes_OverScene;
 game_scenes_OverScene.__name__ = "game.scenes.OverScene";
@@ -34767,6 +35050,7 @@ game_scenes_OverScene.prototype = $extend(core_Scene.prototype,{
 	,index: null
 	,topText: null
 	,subText: null
+	,countdownText: null
 	,options: null
 	,create: function() {
 		var _gthis = this;
@@ -34789,9 +35073,11 @@ game_scenes_OverScene.prototype = $extend(core_Scene.prototype,{
 	,update: function(delta) {
 		core_Scene.prototype.update.call(this,delta);
 		if(this.game.keys.anyJustPressed([87,38])) {
+			core_Sound.play(kha_Assets.sounds.selector);
 			this.index--;
 		}
 		if(this.game.keys.anyJustPressed([83,40])) {
+			core_Sound.play(kha_Assets.sounds.selector);
 			this.index++;
 		}
 		if(this.index == -1) {
@@ -34803,6 +35089,11 @@ game_scenes_OverScene.prototype = $extend(core_Scene.prototype,{
 		this.pointer.y = 96 + this.index * 10;
 		if(this.game.keys.anyJustPressed([32,13])) {
 			this.options[this.index].callback();
+			core_Sound.play(kha_Assets.sounds.selector_up);
+		}
+		if(this.game.keys.justPressed(27)) {
+			this.options[this.options.length - 1].callback();
+			core_Sound.play(kha_Assets.sounds.selector_down);
 		}
 	}
 	,__class__: game_scenes_OverScene
@@ -34928,10 +35219,18 @@ game_scenes_ShootingStar.prototype = $extend(core_Sprite.prototype,{
 	}
 	,__class__: game_scenes_ShootingStar
 });
+var game_scenes_RaceState = $hxEnums["game.scenes.RaceState"] = { __ename__:"game.scenes.RaceState",__constructs__:null
+	,RWaiting: {_hx_name:"RWaiting",_hx_index:0,__enum__:"game.scenes.RaceState",toString:$estr}
+	,RRacing: {_hx_name:"RRacing",_hx_index:1,__enum__:"game.scenes.RaceState",toString:$estr}
+	,ROver: {_hx_name:"ROver",_hx_index:2,__enum__:"game.scenes.RaceState",toString:$estr}
+};
+game_scenes_RaceState.__constructs__ = [game_scenes_RaceState.RWaiting,game_scenes_RaceState.RRacing,game_scenes_RaceState.ROver];
 var game_scenes_RaceScene = function() {
+	this.nextRaceReady = false;
+	this.finishes = 0;
 	this.resultTexts = [];
 	this.pInputs = [];
-	this.state = game_scenes_RaceState.Racing;
+	this.state = game_scenes_RaceState.RWaiting;
 	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.RaceScene"] = game_scenes_RaceScene;
@@ -34947,22 +35246,31 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 	,resultTexts: null
 	,minimapShip: null
 	,minimapSize: null
+	,haltedText: null
 	,playerIndex: null
 	,rollback: null
+	,finishes: null
+	,nextRaceReady: null
+	,iWon: null
 	,pingText: null
 	,frameNumText: null
 	,framesBehindText: null
 	,uncofirmedFramesText: null
 	,rollbacksDoneText: null
-	,haltedText: null
+	,isHaltedText: null
 	,create: function() {
 		game_scenes_PaceScene.prototype.create.call(this);
-		var map = kha_Assets.blobs.get(game_data_LevelData_levelData.get(game_data_State.currentLevel).path);
+		var gameNum = game_conn_Connection.inst.vs.losses + game_conn_Connection.inst.vs.wins;
+		this.playerIndex = (game_conn_Connection.inst.isHost ? 0 : 1) + gameNum;
+		var levelName = game_data_LevelData_vsLevels[gameNum % game_data_LevelData_vsLevels.length];
+		var map = kha_Assets.blobs.get(game_data_LevelData_levelData.get(levelName).path);
 		var tilemap = new core_TiledMap(map.toString());
 		this.worldGroup = new game_groups_WorldGroup(tilemap,this.minimapSize = new core_IntVec2(48,48),2,$bind(this,this.onCrash),$bind(this,this.onFinish),true);
 		this.worldGroup.frame -= 300;
 		this.addSprite(this.worldGroup);
 		this.addSprite(this.worldGroup.finishBox);
+		this.worldGroup.indexForSound = this.playerIndex;
+		this.worldGroup.indexForSecondSound = this.playerIndex == 1 ? 0 : 1;
 		this.addSprite(this.timeText = game_ui_UiText_makeOutlineText(316,2,""));
 		this.addSprite(this.countdownText = game_ui_UiText_makeOutlineText(0,60,"",-1,true));
 		this.minimapShip = new core_Sprite(new core_Vec2(-4,-4),kha_Assets.images.mm_ship);
@@ -34976,28 +35284,27 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		this.hpBar.scrollFactor.set(0,0);
 		this.addSprite(barBg);
 		this.addSprite(this.hpBar);
+		this.addSprite(this.haltedText = game_ui_UiText_makeText(0,170,"waiting...",-10922414,true));
 		this.addSprite(this.pingText = game_ui_UiText_makeText(2,120));
 		this.addSprite(this.frameNumText = game_ui_UiText_makeText(2,130));
 		this.addSprite(this.framesBehindText = game_ui_UiText_makeText(2,140));
 		this.addSprite(this.uncofirmedFramesText = game_ui_UiText_makeText(2,150));
 		this.addSprite(this.rollbacksDoneText = game_ui_UiText_makeText(2,160));
-		this.addSprite(this.haltedText = game_ui_UiText_makeText(2,170));
-		this.playerIndex = game_conn_Connection.inst.isHost ? 0 : 1;
-		this.rollback = new game_rollback_Rollback(this.playerIndex,this.worldGroup,game_rollback_FrameInput_blankInput(),($_=this.worldGroup,$bind($_,$_.updateWithInputs)),($_=this.worldGroup,$bind($_,$_.unserialize)));
+		this.addSprite(this.isHaltedText = game_ui_UiText_makeText(2,170));
+		this.rollback = new game_rollback_Rollback(gameNum,this.playerIndex,this.worldGroup,game_rollback_FrameInput_blankInput(),($_=this.worldGroup,$bind($_,$_.updateWithInputs)),($_=this.worldGroup,$bind($_,$_.unserialize)));
 		game_conn_Connection.inst.addListeners(function() {
-			haxe_Log.trace("Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 98, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 116, className : "game.scenes.RaceScene", methodName : "create"});
 		},function() {
-			haxe_Log.trace("Disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 99, className : "game.scenes.RaceScene", methodName : "create"});
+			haxe_Log.trace("Disconnected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 117, className : "game.scenes.RaceScene", methodName : "create"});
 		},function() {
-			haxe_Log.trace("Peer Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 100, className : "game.scenes.RaceScene", methodName : "create"});
-		},$bind(this,this.handleDisconnect),($_=this.rollback,$bind($_,$_.handleRemoteInput)));
+			haxe_Log.trace("Peer Connected in MatchState",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 118, className : "game.scenes.RaceScene", methodName : "create"});
+		},$bind(this,this.handleDisconnect),($_=this.rollback,$bind($_,$_.handleRemoteInput)),$bind(this,this.handleVsEvent));
 		this.camera.startFollow(this.worldGroup.ships[this.playerIndex]);
-		var pos = this.worldGroup.ships[this.playerIndex].getMidpoint();
-		var pointer = new game_objects_Pointer(pos.x - 4,pos.y - 12);
-		this.addSprite(pointer);
-		this.timers.addTimer(new core_Timer(-this.worldGroup.frame * game_groups_WorldGroup_DELTA,function() {
-			pointer.stop();
-		}));
+		if(game_conn_Connection.inst.vs.waitingForStart) {
+			this.goStart();
+		} else {
+			game_conn_Connection.inst.sendVsEvent(game_conn_VsEvent.StartReady);
+		}
 	}
 	,update: function(delta) {
 		var pInput = 0;
@@ -35013,7 +35320,7 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		if(this.game.keys.anyPressed([83,40])) {
 			pInput += 8;
 		}
-		if(this.state == game_scenes_RaceState.Racing) {
+		if(this.state == game_scenes_RaceState.RRacing) {
 			this.pInputs.push(pInput);
 		}
 		this.timeText.setBitmapText(this.worldGroup.frame < 0 || this.resultTexts.length == 2 ? "" : game_ui_TextUtil_formatTime(this.worldGroup.frame * game_groups_WorldGroup_DELTA));
@@ -35031,41 +35338,74 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		var scaleY = 2048 / this.minimapSize.y;
 		this.minimapShip.setPosition(320 - this.minimapSize.x - 3 + this.worldGroup.ships[this.playerIndex].x / scaleX,180 - this.minimapSize.y - 3 + this.worldGroup.ships[this.playerIndex].y / scaleY);
 		game_scenes_PaceScene.prototype.update.call(this,delta);
-		this.rollback.tick(pInput,delta);
+		if(this.state != game_scenes_RaceState.RWaiting) {
+			this.rollback.tick(pInput,delta);
+		} else {
+			haxe_Log.trace("waiting",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 182, className : "game.scenes.RaceScene", methodName : "update"});
+		}
 		if(this.game.keys.justPressed(84)) {
 			game_util_Debug.on = !game_util_Debug.on;
+			haxe_Log.trace(game_conn_Connection.inst.vs,{ fileName : "game/scenes/RaceScene.hx", lineNumber : 190, className : "game.scenes.RaceScene", methodName : "update"});
 		}
+		this.haltedText.visible = this.nextRaceReady || this.state == game_scenes_RaceState.RWaiting || this.rollback.isHalted;
 		this.pingText.visible = game_util_Debug.on;
 		this.frameNumText.visible = game_util_Debug.on;
 		this.framesBehindText.visible = game_util_Debug.on;
 		this.uncofirmedFramesText.visible = game_util_Debug.on;
 		this.rollbacksDoneText.visible = game_util_Debug.on;
-		this.haltedText.visible = game_util_Debug.on;
+		this.isHaltedText.visible = game_util_Debug.on;
 		this.pingText.text = "ping: " + game_conn_Connection.inst.pingTime + "ms";
 		this.frameNumText.text = "frame: " + this.rollback.currentFrame;
 		this.framesBehindText.text = "frames behind: " + this.rollback.futureRemotes.length;
 		this.uncofirmedFramesText.text = "unconfirmed frames: " + this.rollback.frames.length;
 		this.rollbacksDoneText.text = "rollbacks: " + this.rollback.rollbacksDone;
-		this.haltedText.text = "halted: " + Std.string(this.rollback.isHalted);
+		this.isHaltedText.text = "halted: " + Std.string(this.rollback.isHalted);
 	}
 	,onCrash: function(ship) {
-		haxe_Log.trace("ship crashed",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 187, className : "game.scenes.RaceScene", methodName : "onCrash"});
+		haxe_Log.trace("ship crashed",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 214, className : "game.scenes.RaceScene", methodName : "onCrash"});
 	}
 	,onFinish: function(ship) {
-		haxe_Log.trace("ship finished",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 195, className : "game.scenes.RaceScene", methodName : "onFinish"});
+		haxe_Log.trace("ship finished",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 222, className : "game.scenes.RaceScene", methodName : "onFinish"});
 		var text = (ship == this.worldGroup.ships[this.playerIndex] ? "You" : "Opp") + (": " + game_ui_TextUtil_formatTime(game_groups_WorldGroup_DELTA * ship.finishFrame));
 		var resultSprite = game_ui_UiText_makeOutlineText(0,this.timeText.y + 10 + this.resultTexts.length * 10 | 0,text);
 		resultSprite.x = 316 - resultSprite.textWidth;
 		this.resultTexts.push(resultSprite);
 		this.addSprite(resultSprite);
 		if(ship == this.worldGroup.ships[this.playerIndex]) {
-			haxe_Log.trace(this.pInputs,{ fileName : "game/scenes/RaceScene.hx", lineNumber : 209, className : "game.scenes.RaceScene", methodName : "onFinish"});
+			this.iWon = this.finishes == 0;
 		}
+		this.finishes++;
+		if(this.finishes == 2) {
+			game_conn_Connection.inst.vs.losses += this.iWon ? 0 : 1;
+			game_conn_Connection.inst.vs.wins += this.iWon ? 1 : 0;
+			this.over(this.iWon);
+		}
+	}
+	,handleVsEvent: function(event) {
+		switch(event._hx_index) {
+		case 0:
+			if(this.state == game_scenes_RaceState.RWaiting) {
+				this.goStart();
+			}
+			break;
+		case 1:
+			if(this.nextRaceReady) {
+				this.goNextRace();
+			}
+			break;
+		case 2:
+			this.handleLeave();
+			break;
+		}
+	}
+	,handleLeave: function() {
+		this.game.switchScene(new game_scenes_FailScene("Opponent left. You had " + game_conn_Connection.inst.vs.wins + " wins, and " + game_conn_Connection.inst.vs.losses + " losses"));
+		game_conn_Connection.inst.leaveRoom();
 	}
 	,handleDisconnect: function(message) {
 		var _gthis = this;
 		this.timers.addTimer(new core_Timer(3.0,function() {
-			haxe_Log.trace("disconnect message",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 215, className : "game.scenes.RaceScene", methodName : "handleDisconnect", customParams : [message]});
+			haxe_Log.trace("disconnect message",{ fileName : "game/scenes/RaceScene.hx", lineNumber : 273, className : "game.scenes.RaceScene", methodName : "handleDisconnect", customParams : [message]});
 			_gthis.game.switchScene(new game_scenes_FailScene("Disconnected. Sorry!"));
 		}));
 	}
@@ -35076,33 +35416,53 @@ game_scenes_RaceScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 			startText.stop();
 		}));
 	}
-	,over: function() {
-		this.state = game_scenes_RaceState.Over;
-		this.camera.stopFollow();
-	}
-	,addMenu: function(win) {
+	,over: function(win) {
 		var _gthis = this;
+		this.state = game_scenes_RaceState.ROver;
+		this.camera.stopFollow();
 		this.timers.addTimer(new core_Timer(2.0,function() {
-			var menuBg = new core_Sprite(new core_Vec2(100,60),kha_Assets.images.tiny_slice,new core_IntVec2(4,4));
-			menuBg.makeNineSliceImage(new core_IntVec2(120,60),new core_IntVec2(1,1),new core_IntVec2(3,3));
-			menuBg.scrollFactor.set(0,0);
-			_gthis.addSprite(menuBg);
-			_gthis.addSprite(game_ui_UiText_makeText(0,62,win ? game_ui_TextUtil_formatTime(_gthis.pInputs.length * game_groups_WorldGroup_DELTA) : "Try again?",null,true));
-			_gthis.addSprite(game_ui_UiText_makeText(0,96,"Retry",-1,true));
-			_gthis.addSprite(game_ui_UiText_makeText(0,106,"Quit",-1,true));
+			var s;
+			core_Sound.play(win ? kha_Assets.sounds.win : kha_Assets.sounds.lost,1.0);
+			var _gthis1 = _gthis.game;
+			s = new game_scenes_OverScene(win ? "You won!" : "You lost...","" + game_conn_Connection.inst.vs.wins + " wins, " + game_conn_Connection.inst.vs.losses + " losses",[{ text : "Next", callback : function() {
+				_gthis.nextRaceReady = true;
+				game_conn_Connection.inst.sendVsEvent(game_conn_VsEvent.NextReady);
+				if(game_conn_Connection.inst.vs.waitingForNext) {
+					_gthis.goNextRace();
+				}
+				_gthis.game.removeScene(s);
+			}},{ text : "Quit", callback : function() {
+				game_conn_Connection.inst.sendVsEvent(game_conn_VsEvent.Leaving);
+				_gthis.game.switchScene(new game_scenes_FailScene("You finished with " + game_conn_Connection.inst.vs.wins + " wins, " + game_conn_Connection.inst.vs.losses + " losses"));
+			}}],"Next race in ");
+			_gthis1.addScene(s);
 		}));
+	}
+	,goNextRace: function() {
+		this.game.switchScene(new game_scenes_RaceScene());
+	}
+	,goStart: function() {
+		var pos = this.worldGroup.ships[this.playerIndex].getMidpoint();
+		var pointer = new game_objects_Pointer(pos.x - 4,pos.y - 12);
+		this.addSprite(pointer);
+		this.timers.addTimer(new core_Timer(-this.worldGroup.frame * game_groups_WorldGroup_DELTA,function() {
+			pointer.stop();
+		}));
+		this.state = game_scenes_RaceState.RRacing;
+		game_conn_Connection.inst.vs.waitingForStart = false;
+		game_conn_Connection.inst.vs.waitingForNext = false;
 	}
 	,__class__: game_scenes_RaceScene
 });
-var game_scenes_RaceState = $hxEnums["game.scenes.RaceState"] = { __ename__:"game.scenes.RaceState",__constructs__:null
-	,Idle: {_hx_name:"Idle",_hx_index:0,__enum__:"game.scenes.RaceState",toString:$estr}
-	,Racing: {_hx_name:"Racing",_hx_index:1,__enum__:"game.scenes.RaceState",toString:$estr}
-	,Over: {_hx_name:"Over",_hx_index:2,__enum__:"game.scenes.RaceState",toString:$estr}
+var game_scenes_TrialState = $hxEnums["game.scenes.TrialState"] = { __ename__:"game.scenes.TrialState",__constructs__:null
+	,TIdle: {_hx_name:"TIdle",_hx_index:0,__enum__:"game.scenes.TrialState",toString:$estr}
+	,TRacing: {_hx_name:"TRacing",_hx_index:1,__enum__:"game.scenes.TrialState",toString:$estr}
+	,TOver: {_hx_name:"TOver",_hx_index:2,__enum__:"game.scenes.TrialState",toString:$estr}
 };
-game_scenes_RaceState.__constructs__ = [game_scenes_RaceState.Idle,game_scenes_RaceState.Racing,game_scenes_RaceState.Over];
+game_scenes_TrialState.__constructs__ = [game_scenes_TrialState.TIdle,game_scenes_TrialState.TRacing,game_scenes_TrialState.TOver];
 var game_scenes_TrialScene = function() {
 	this.pInputs = [];
-	this.state = game_scenes_RaceState.Idle;
+	this.state = game_scenes_TrialState.TIdle;
 	game_scenes_PaceScene.call(this);
 };
 $hxClasses["game.scenes.TrialScene"] = game_scenes_TrialScene;
@@ -35129,6 +35489,7 @@ game_scenes_TrialScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		this.worldGroup = new game_groups_WorldGroup(tilemap,this.minimapSize = new core_IntVec2(48,48),this.gInputs != null ? 2 : 1,$bind(this,this.onCrash),$bind(this,this.onFinish),false);
 		this.addSprite(this.worldGroup);
 		this.addSprite(this.worldGroup.finishBox);
+		this.worldGroup.indexForSound = 1;
 		this.addSprite(this.timeText = game_ui_UiText_makeOutlineText(316,2,"",-1));
 		this.minimapShip = new core_Sprite(new core_Vec2(-4,-4),kha_Assets.images.mm_ship);
 		this.minimapShip.scrollFactor.set(0,0);
@@ -35165,21 +35526,21 @@ game_scenes_TrialScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		if(this.game.keys.anyPressed([83,40])) {
 			pInput += 8;
 		}
-		if(this.state == game_scenes_RaceState.Idle && pInput > 0) {
-			this.state = game_scenes_RaceState.Racing;
+		if(this.state == game_scenes_TrialState.TIdle && pInput > 0) {
+			this.state = game_scenes_TrialState.TRacing;
 		}
-		if(this.game.keys.justPressed(27) && this.state != game_scenes_RaceState.Over) {
+		if(this.game.keys.justPressed(27) && this.state != game_scenes_TrialState.TOver) {
 			this.worldGroup.ships[this.playerIndex].health = 0;
 			pInput = 4;
 		}
 		var inputs = [];
-		if(this.state != game_scenes_RaceState.Idle) {
+		if(this.state != game_scenes_TrialState.TIdle) {
 			if(this.gInputs != null) {
 				var tmp = this.gInputs[this.worldGroup.frame + 1];
 				inputs.push(tmp != null ? tmp : 0);
 			}
 			inputs.push(pInput);
-			if(this.state == game_scenes_RaceState.Racing) {
+			if(this.state == game_scenes_TrialState.TRacing) {
 				this.pInputs.push(pInput);
 			}
 			this.timeText.setBitmapText(game_ui_TextUtil_formatTime((this.worldGroup.ships[this.playerIndex].health > 0 ? this.pInputs.length : this.worldGroup.frame) * game_groups_WorldGroup_DELTA));
@@ -35189,7 +35550,7 @@ game_scenes_TrialScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		var scaleY = 2048 / this.minimapSize.y;
 		this.minimapShip.setPosition(320 - this.minimapSize.x - 3 + this.worldGroup.ships[this.playerIndex].x / scaleX,180 - this.minimapSize.y - 3 + this.worldGroup.ships[this.playerIndex].y / scaleY);
 		game_scenes_PaceScene.prototype.update.call(this,delta);
-		if(this.state != game_scenes_RaceState.Idle) {
+		if(this.state != game_scenes_TrialState.TIdle) {
 			this.worldGroup.updateWithInputs(delta,inputs,this.worldGroup.frame);
 		}
 		this.hpBar.value = this.worldGroup.ships[this.playerIndex].health;
@@ -35204,7 +35565,7 @@ game_scenes_TrialScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		}
 	}
 	,onCrash: function(ship) {
-		if(this.state == game_scenes_RaceState.Over) {
+		if(this.state == game_scenes_TrialState.TOver) {
 			throw haxe_Exception.thrown("multiple crashes");
 		}
 		if(ship == this.worldGroup.ships[this.ghostIndex]) {
@@ -35224,12 +35585,13 @@ game_scenes_TrialScene.prototype = $extend(game_scenes_PaceScene.prototype,{
 		}
 	}
 	,over: function() {
-		this.state = game_scenes_RaceState.Over;
+		this.state = game_scenes_TrialState.TOver;
 		this.camera.stopFollow();
 	}
 	,addMenu: function(win,isBest) {
 		var _gthis = this;
 		this.timers.addTimer(new core_Timer(2.0,function() {
+			core_Sound.play(isBest ? kha_Assets.sounds.record : kha_Assets.sounds.lost,1.0);
 			_gthis.game.addScene(new game_scenes_OverScene(win ? game_ui_TextUtil_formatTime(_gthis.pInputs.length * game_groups_WorldGroup_DELTA) : "Try again?",isBest ? "New Best!" : win && game_data_State.levelBests.get(game_data_State.currentLevel) != null ? "Best: " + game_ui_TextUtil_formatTime(game_data_State.levelBests.get(game_data_State.currentLevel).length * game_groups_WorldGroup_DELTA) : null,[{ text : "Retry", callback : function() {
 				_gthis.game.switchScene(new game_scenes_TrialScene());
 			}},{ text : "Quit", callback : function() {
@@ -35358,12 +35720,16 @@ $hxClasses["game.util.Logger"] = game_util_Logger;
 game_util_Logger.__name__ = "game.util.Logger";
 game_util_Logger.debug = function(m1,m2,m3) {
 	if(game_util_Logger.level <= 0) {
-		haxe_Log.trace(m1,{ fileName : "game/util/Logger.hx", lineNumber : 8, className : "game.util.Logger", methodName : "debug", customParams : [m2,m3]});
+		var tmp = m2;
+		var tmp1 = m3;
+		haxe_Log.trace(m1,{ fileName : "game/util/Logger.hx", lineNumber : 8, className : "game.util.Logger", methodName : "debug", customParams : [tmp != null ? tmp : "",tmp1 != null ? tmp1 : ""]});
 	}
 };
 game_util_Logger.log = function(m1,m2,m3) {
 	if(game_util_Logger.level <= 1) {
-		haxe_Log.trace(m1,{ fileName : "game/util/Logger.hx", lineNumber : 14, className : "game.util.Logger", methodName : "log", customParams : [m2,m3]});
+		var tmp = m2;
+		var tmp1 = m3;
+		haxe_Log.trace(m1,{ fileName : "game/util/Logger.hx", lineNumber : 14, className : "game.util.Logger", methodName : "log", customParams : [tmp != null ? tmp : "",tmp1 != null ? tmp1 : ""]});
 	}
 };
 function game_util_Utils_raytrace(x0,y0,x1,y1,respectOrder) {
@@ -38573,13 +38939,727 @@ kha__$Assets_ImageList.prototype = {
 	,__class__: kha__$Assets_ImageList
 };
 var kha__$Assets_SoundList = function() {
-	this.names = [];
+	this.names = ["accel01","accel02","accel03","accel04","accel05","accel06","accel07","accel08","accel09","accel10","accel11","brake01","brake02","brake03","brake04","brake05","brake06","brake07","brake08","brake09","brake10","brake11","destroy","finish","lost","pace_hit1","pace_hit2","pace_hit3","pace_sting1","pace_sting2","pace_sting3","pace_sting4","pace_sting5","pace_sting6","pace_sting7","pace_sting8","pace_sting9","record","selector","selector_down","selector_up","win"];
+	this.winSize = 30127;
+	this.winDescription = { name : "win", file_sizes : [30127,33017], files : ["win.ogg","win.mp3"], type : "sound"};
+	this.winName = "win";
+	this.win = null;
+	this.selector_upSize = 9061;
+	this.selector_upDescription = { name : "selector_up", file_sizes : [9061,9194], files : ["selector-up.ogg","selector-up.mp3"], type : "sound"};
+	this.selector_upName = "selector_up";
+	this.selector_up = null;
+	this.selector_downSize = 8981;
+	this.selector_downDescription = { name : "selector_down", file_sizes : [8981,9194], files : ["selector-down.ogg","selector-down.mp3"], type : "sound"};
+	this.selector_downName = "selector_down";
+	this.selector_down = null;
+	this.selectorSize = 5128;
+	this.selectorDescription = { name : "selector", file_sizes : [5128,2924], files : ["selector.ogg","selector.mp3"], type : "sound"};
+	this.selectorName = "selector";
+	this.selector = null;
+	this.recordSize = 31855;
+	this.recordDescription = { name : "record", file_sizes : [31855,33017], files : ["record.ogg","record.mp3"], type : "sound"};
+	this.recordName = "record";
+	this.record = null;
+	this.pace_sting9Size = 40113;
+	this.pace_sting9Description = { name : "pace_sting9", file_sizes : [40113,46392], files : ["pace-sting9.ogg","pace-sting9.mp3"], type : "sound"};
+	this.pace_sting9Name = "pace_sting9";
+	this.pace_sting9 = null;
+	this.pace_sting8Size = 40604;
+	this.pace_sting8Description = { name : "pace_sting8", file_sizes : [40604,46392], files : ["pace-sting8.ogg","pace-sting8.mp3"], type : "sound"};
+	this.pace_sting8Name = "pace_sting8";
+	this.pace_sting8 = null;
+	this.pace_sting7Size = 39499;
+	this.pace_sting7Description = { name : "pace_sting7", file_sizes : [39499,46392], files : ["pace-sting7.ogg","pace-sting7.mp3"], type : "sound"};
+	this.pace_sting7Name = "pace_sting7";
+	this.pace_sting7 = null;
+	this.pace_sting6Size = 39988;
+	this.pace_sting6Description = { name : "pace_sting6", file_sizes : [39988,46392], files : ["pace-sting6.ogg","pace-sting6.mp3"], type : "sound"};
+	this.pace_sting6Name = "pace_sting6";
+	this.pace_sting6 = null;
+	this.pace_sting5Size = 39423;
+	this.pace_sting5Description = { name : "pace_sting5", file_sizes : [39423,46392], files : ["pace-sting5.ogg","pace-sting5.mp3"], type : "sound"};
+	this.pace_sting5Name = "pace_sting5";
+	this.pace_sting5 = null;
+	this.pace_sting4Size = 39914;
+	this.pace_sting4Description = { name : "pace_sting4", file_sizes : [39914,46392], files : ["pace-sting4.ogg","pace-sting4.mp3"], type : "sound"};
+	this.pace_sting4Name = "pace_sting4";
+	this.pace_sting4 = null;
+	this.pace_sting3Size = 40972;
+	this.pace_sting3Description = { name : "pace_sting3", file_sizes : [40972,46392], files : ["pace-sting3.ogg","pace-sting3.mp3"], type : "sound"};
+	this.pace_sting3Name = "pace_sting3";
+	this.pace_sting3 = null;
+	this.pace_sting2Size = 39338;
+	this.pace_sting2Description = { name : "pace_sting2", file_sizes : [39338,46392], files : ["pace-sting2.ogg","pace-sting2.mp3"], type : "sound"};
+	this.pace_sting2Name = "pace_sting2";
+	this.pace_sting2 = null;
+	this.pace_sting1Size = 40112;
+	this.pace_sting1Description = { name : "pace_sting1", file_sizes : [40112,46392], files : ["pace-sting1.ogg","pace-sting1.mp3"], type : "sound"};
+	this.pace_sting1Name = "pace_sting1";
+	this.pace_sting1 = null;
+	this.pace_hit3Size = 15334;
+	this.pace_hit3Description = { name : "pace_hit3", file_sizes : [15334,17135], files : ["pace-hit3.ogg","pace-hit3.mp3"], type : "sound"};
+	this.pace_hit3Name = "pace_hit3";
+	this.pace_hit3 = null;
+	this.pace_hit2Size = 15399;
+	this.pace_hit2Description = { name : "pace_hit2", file_sizes : [15399,17135], files : ["pace-hit2.ogg","pace-hit2.mp3"], type : "sound"};
+	this.pace_hit2Name = "pace_hit2";
+	this.pace_hit2 = null;
+	this.pace_hit1Size = 15072;
+	this.pace_hit1Description = { name : "pace_hit1", file_sizes : [15072,17135], files : ["pace-hit1.ogg","pace-hit1.mp3"], type : "sound"};
+	this.pace_hit1Name = "pace_hit1";
+	this.pace_hit1 = null;
+	this.lostSize = 29002;
+	this.lostDescription = { name : "lost", file_sizes : [29002,33017], files : ["lost.ogg","lost.mp3"], type : "sound"};
+	this.lostName = "lost";
+	this.lost = null;
+	this.finishSize = 66670;
+	this.finishDescription = { name : "finish", file_sizes : [66670,81083], files : ["finish.ogg","finish.mp3"], type : "sound"};
+	this.finishName = "finish";
+	this.finish = null;
+	this.destroySize = 41348;
+	this.destroyDescription = { name : "destroy", file_sizes : [41348,48900], files : ["destroy.ogg","destroy.mp3"], type : "sound"};
+	this.destroyName = "destroy";
+	this.destroy = null;
+	this.brake11Size = 10312;
+	this.brake11Description = { name : "brake11", file_sizes : [10312,8776], files : ["brake11.ogg","brake11.mp3"], type : "sound"};
+	this.brake11Name = "brake11";
+	this.brake11 = null;
+	this.brake10Size = 9726;
+	this.brake10Description = { name : "brake10", file_sizes : [9726,8776], files : ["brake10.ogg","brake10.mp3"], type : "sound"};
+	this.brake10Name = "brake10";
+	this.brake10 = null;
+	this.brake09Size = 10470;
+	this.brake09Description = { name : "brake09", file_sizes : [10470,9194], files : ["brake09.ogg","brake09.mp3"], type : "sound"};
+	this.brake09Name = "brake09";
+	this.brake09 = null;
+	this.brake08Size = 10334;
+	this.brake08Description = { name : "brake08", file_sizes : [10334,8776], files : ["brake08.ogg","brake08.mp3"], type : "sound"};
+	this.brake08Name = "brake08";
+	this.brake08 = null;
+	this.brake07Size = 10569;
+	this.brake07Description = { name : "brake07", file_sizes : [10569,8776], files : ["brake07.ogg","brake07.mp3"], type : "sound"};
+	this.brake07Name = "brake07";
+	this.brake07 = null;
+	this.brake06Size = 10655;
+	this.brake06Description = { name : "brake06", file_sizes : [10655,8776], files : ["brake06.ogg","brake06.mp3"], type : "sound"};
+	this.brake06Name = "brake06";
+	this.brake06 = null;
+	this.brake05Size = 10604;
+	this.brake05Description = { name : "brake05", file_sizes : [10604,8776], files : ["brake05.ogg","brake05.mp3"], type : "sound"};
+	this.brake05Name = "brake05";
+	this.brake05 = null;
+	this.brake04Size = 10626;
+	this.brake04Description = { name : "brake04", file_sizes : [10626,8776], files : ["brake04.ogg","brake04.mp3"], type : "sound"};
+	this.brake04Name = "brake04";
+	this.brake04 = null;
+	this.brake03Size = 10212;
+	this.brake03Description = { name : "brake03", file_sizes : [10212,8776], files : ["brake03.ogg","brake03.mp3"], type : "sound"};
+	this.brake03Name = "brake03";
+	this.brake03 = null;
+	this.brake02Size = 10302;
+	this.brake02Description = { name : "brake02", file_sizes : [10302,8776], files : ["brake02.ogg","brake02.mp3"], type : "sound"};
+	this.brake02Name = "brake02";
+	this.brake02 = null;
+	this.brake01Size = 10180;
+	this.brake01Description = { name : "brake01", file_sizes : [10180,8776], files : ["brake01.ogg","brake01.mp3"], type : "sound"};
+	this.brake01Name = "brake01";
+	this.brake01 = null;
+	this.accel11Size = 10772;
+	this.accel11Description = { name : "accel11", file_sizes : [10772,8776], files : ["accel11.ogg","accel11.mp3"], type : "sound"};
+	this.accel11Name = "accel11";
+	this.accel11 = null;
+	this.accel10Size = 10504;
+	this.accel10Description = { name : "accel10", file_sizes : [10504,8776], files : ["accel10.ogg","accel10.mp3"], type : "sound"};
+	this.accel10Name = "accel10";
+	this.accel10 = null;
+	this.accel09Size = 10957;
+	this.accel09Description = { name : "accel09", file_sizes : [10957,9194], files : ["accel09.ogg","accel09.mp3"], type : "sound"};
+	this.accel09Name = "accel09";
+	this.accel09 = null;
+	this.accel08Size = 10631;
+	this.accel08Description = { name : "accel08", file_sizes : [10631,8776], files : ["accel08.ogg","accel08.mp3"], type : "sound"};
+	this.accel08Name = "accel08";
+	this.accel08 = null;
+	this.accel07Size = 10764;
+	this.accel07Description = { name : "accel07", file_sizes : [10764,8776], files : ["accel07.ogg","accel07.mp3"], type : "sound"};
+	this.accel07Name = "accel07";
+	this.accel07 = null;
+	this.accel06Size = 10529;
+	this.accel06Description = { name : "accel06", file_sizes : [10529,8776], files : ["accel06.ogg","accel06.mp3"], type : "sound"};
+	this.accel06Name = "accel06";
+	this.accel06 = null;
+	this.accel05Size = 10440;
+	this.accel05Description = { name : "accel05", file_sizes : [10440,8776], files : ["accel05.ogg","accel05.mp3"], type : "sound"};
+	this.accel05Name = "accel05";
+	this.accel05 = null;
+	this.accel04Size = 10469;
+	this.accel04Description = { name : "accel04", file_sizes : [10469,8776], files : ["accel04.ogg","accel04.mp3"], type : "sound"};
+	this.accel04Name = "accel04";
+	this.accel04 = null;
+	this.accel03Size = 10496;
+	this.accel03Description = { name : "accel03", file_sizes : [10496,8776], files : ["accel03.ogg","accel03.mp3"], type : "sound"};
+	this.accel03Name = "accel03";
+	this.accel03 = null;
+	this.accel02Size = 10473;
+	this.accel02Description = { name : "accel02", file_sizes : [10473,8776], files : ["accel02.ogg","accel02.mp3"], type : "sound"};
+	this.accel02Name = "accel02";
+	this.accel02 = null;
+	this.accel01Size = 10335;
+	this.accel01Description = { name : "accel01", file_sizes : [10335,8776], files : ["accel01.ogg","accel01.mp3"], type : "sound"};
+	this.accel01Name = "accel01";
+	this.accel01 = null;
 };
 $hxClasses["kha._Assets.SoundList"] = kha__$Assets_SoundList;
 kha__$Assets_SoundList.__name__ = "kha._Assets.SoundList";
 kha__$Assets_SoundList.prototype = {
 	get: function(name) {
 		return Reflect.field(this,name);
+	}
+	,accel01: null
+	,accel01Name: null
+	,accel01Description: null
+	,accel01Size: null
+	,accel01Load: function(done,failure) {
+		kha_Assets.loadSound("accel01",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel01Load"});
+	}
+	,accel01Unload: function() {
+		this.accel01.unload();
+		this.accel01 = null;
+	}
+	,accel02: null
+	,accel02Name: null
+	,accel02Description: null
+	,accel02Size: null
+	,accel02Load: function(done,failure) {
+		kha_Assets.loadSound("accel02",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel02Load"});
+	}
+	,accel02Unload: function() {
+		this.accel02.unload();
+		this.accel02 = null;
+	}
+	,accel03: null
+	,accel03Name: null
+	,accel03Description: null
+	,accel03Size: null
+	,accel03Load: function(done,failure) {
+		kha_Assets.loadSound("accel03",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel03Load"});
+	}
+	,accel03Unload: function() {
+		this.accel03.unload();
+		this.accel03 = null;
+	}
+	,accel04: null
+	,accel04Name: null
+	,accel04Description: null
+	,accel04Size: null
+	,accel04Load: function(done,failure) {
+		kha_Assets.loadSound("accel04",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel04Load"});
+	}
+	,accel04Unload: function() {
+		this.accel04.unload();
+		this.accel04 = null;
+	}
+	,accel05: null
+	,accel05Name: null
+	,accel05Description: null
+	,accel05Size: null
+	,accel05Load: function(done,failure) {
+		kha_Assets.loadSound("accel05",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel05Load"});
+	}
+	,accel05Unload: function() {
+		this.accel05.unload();
+		this.accel05 = null;
+	}
+	,accel06: null
+	,accel06Name: null
+	,accel06Description: null
+	,accel06Size: null
+	,accel06Load: function(done,failure) {
+		kha_Assets.loadSound("accel06",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel06Load"});
+	}
+	,accel06Unload: function() {
+		this.accel06.unload();
+		this.accel06 = null;
+	}
+	,accel07: null
+	,accel07Name: null
+	,accel07Description: null
+	,accel07Size: null
+	,accel07Load: function(done,failure) {
+		kha_Assets.loadSound("accel07",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel07Load"});
+	}
+	,accel07Unload: function() {
+		this.accel07.unload();
+		this.accel07 = null;
+	}
+	,accel08: null
+	,accel08Name: null
+	,accel08Description: null
+	,accel08Size: null
+	,accel08Load: function(done,failure) {
+		kha_Assets.loadSound("accel08",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel08Load"});
+	}
+	,accel08Unload: function() {
+		this.accel08.unload();
+		this.accel08 = null;
+	}
+	,accel09: null
+	,accel09Name: null
+	,accel09Description: null
+	,accel09Size: null
+	,accel09Load: function(done,failure) {
+		kha_Assets.loadSound("accel09",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel09Load"});
+	}
+	,accel09Unload: function() {
+		this.accel09.unload();
+		this.accel09 = null;
+	}
+	,accel10: null
+	,accel10Name: null
+	,accel10Description: null
+	,accel10Size: null
+	,accel10Load: function(done,failure) {
+		kha_Assets.loadSound("accel10",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel10Load"});
+	}
+	,accel10Unload: function() {
+		this.accel10.unload();
+		this.accel10 = null;
+	}
+	,accel11: null
+	,accel11Name: null
+	,accel11Description: null
+	,accel11Size: null
+	,accel11Load: function(done,failure) {
+		kha_Assets.loadSound("accel11",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "accel11Load"});
+	}
+	,accel11Unload: function() {
+		this.accel11.unload();
+		this.accel11 = null;
+	}
+	,brake01: null
+	,brake01Name: null
+	,brake01Description: null
+	,brake01Size: null
+	,brake01Load: function(done,failure) {
+		kha_Assets.loadSound("brake01",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake01Load"});
+	}
+	,brake01Unload: function() {
+		this.brake01.unload();
+		this.brake01 = null;
+	}
+	,brake02: null
+	,brake02Name: null
+	,brake02Description: null
+	,brake02Size: null
+	,brake02Load: function(done,failure) {
+		kha_Assets.loadSound("brake02",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake02Load"});
+	}
+	,brake02Unload: function() {
+		this.brake02.unload();
+		this.brake02 = null;
+	}
+	,brake03: null
+	,brake03Name: null
+	,brake03Description: null
+	,brake03Size: null
+	,brake03Load: function(done,failure) {
+		kha_Assets.loadSound("brake03",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake03Load"});
+	}
+	,brake03Unload: function() {
+		this.brake03.unload();
+		this.brake03 = null;
+	}
+	,brake04: null
+	,brake04Name: null
+	,brake04Description: null
+	,brake04Size: null
+	,brake04Load: function(done,failure) {
+		kha_Assets.loadSound("brake04",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake04Load"});
+	}
+	,brake04Unload: function() {
+		this.brake04.unload();
+		this.brake04 = null;
+	}
+	,brake05: null
+	,brake05Name: null
+	,brake05Description: null
+	,brake05Size: null
+	,brake05Load: function(done,failure) {
+		kha_Assets.loadSound("brake05",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake05Load"});
+	}
+	,brake05Unload: function() {
+		this.brake05.unload();
+		this.brake05 = null;
+	}
+	,brake06: null
+	,brake06Name: null
+	,brake06Description: null
+	,brake06Size: null
+	,brake06Load: function(done,failure) {
+		kha_Assets.loadSound("brake06",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake06Load"});
+	}
+	,brake06Unload: function() {
+		this.brake06.unload();
+		this.brake06 = null;
+	}
+	,brake07: null
+	,brake07Name: null
+	,brake07Description: null
+	,brake07Size: null
+	,brake07Load: function(done,failure) {
+		kha_Assets.loadSound("brake07",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake07Load"});
+	}
+	,brake07Unload: function() {
+		this.brake07.unload();
+		this.brake07 = null;
+	}
+	,brake08: null
+	,brake08Name: null
+	,brake08Description: null
+	,brake08Size: null
+	,brake08Load: function(done,failure) {
+		kha_Assets.loadSound("brake08",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake08Load"});
+	}
+	,brake08Unload: function() {
+		this.brake08.unload();
+		this.brake08 = null;
+	}
+	,brake09: null
+	,brake09Name: null
+	,brake09Description: null
+	,brake09Size: null
+	,brake09Load: function(done,failure) {
+		kha_Assets.loadSound("brake09",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake09Load"});
+	}
+	,brake09Unload: function() {
+		this.brake09.unload();
+		this.brake09 = null;
+	}
+	,brake10: null
+	,brake10Name: null
+	,brake10Description: null
+	,brake10Size: null
+	,brake10Load: function(done,failure) {
+		kha_Assets.loadSound("brake10",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake10Load"});
+	}
+	,brake10Unload: function() {
+		this.brake10.unload();
+		this.brake10 = null;
+	}
+	,brake11: null
+	,brake11Name: null
+	,brake11Description: null
+	,brake11Size: null
+	,brake11Load: function(done,failure) {
+		kha_Assets.loadSound("brake11",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "brake11Load"});
+	}
+	,brake11Unload: function() {
+		this.brake11.unload();
+		this.brake11 = null;
+	}
+	,destroy: null
+	,destroyName: null
+	,destroyDescription: null
+	,destroySize: null
+	,destroyLoad: function(done,failure) {
+		kha_Assets.loadSound("destroy",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "destroyLoad"});
+	}
+	,destroyUnload: function() {
+		this.destroy.unload();
+		this.destroy = null;
+	}
+	,finish: null
+	,finishName: null
+	,finishDescription: null
+	,finishSize: null
+	,finishLoad: function(done,failure) {
+		kha_Assets.loadSound("finish",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "finishLoad"});
+	}
+	,finishUnload: function() {
+		this.finish.unload();
+		this.finish = null;
+	}
+	,lost: null
+	,lostName: null
+	,lostDescription: null
+	,lostSize: null
+	,lostLoad: function(done,failure) {
+		kha_Assets.loadSound("lost",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "lostLoad"});
+	}
+	,lostUnload: function() {
+		this.lost.unload();
+		this.lost = null;
+	}
+	,pace_hit1: null
+	,pace_hit1Name: null
+	,pace_hit1Description: null
+	,pace_hit1Size: null
+	,pace_hit1Load: function(done,failure) {
+		kha_Assets.loadSound("pace_hit1",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_hit1Load"});
+	}
+	,pace_hit1Unload: function() {
+		this.pace_hit1.unload();
+		this.pace_hit1 = null;
+	}
+	,pace_hit2: null
+	,pace_hit2Name: null
+	,pace_hit2Description: null
+	,pace_hit2Size: null
+	,pace_hit2Load: function(done,failure) {
+		kha_Assets.loadSound("pace_hit2",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_hit2Load"});
+	}
+	,pace_hit2Unload: function() {
+		this.pace_hit2.unload();
+		this.pace_hit2 = null;
+	}
+	,pace_hit3: null
+	,pace_hit3Name: null
+	,pace_hit3Description: null
+	,pace_hit3Size: null
+	,pace_hit3Load: function(done,failure) {
+		kha_Assets.loadSound("pace_hit3",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_hit3Load"});
+	}
+	,pace_hit3Unload: function() {
+		this.pace_hit3.unload();
+		this.pace_hit3 = null;
+	}
+	,pace_sting1: null
+	,pace_sting1Name: null
+	,pace_sting1Description: null
+	,pace_sting1Size: null
+	,pace_sting1Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting1",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting1Load"});
+	}
+	,pace_sting1Unload: function() {
+		this.pace_sting1.unload();
+		this.pace_sting1 = null;
+	}
+	,pace_sting2: null
+	,pace_sting2Name: null
+	,pace_sting2Description: null
+	,pace_sting2Size: null
+	,pace_sting2Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting2",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting2Load"});
+	}
+	,pace_sting2Unload: function() {
+		this.pace_sting2.unload();
+		this.pace_sting2 = null;
+	}
+	,pace_sting3: null
+	,pace_sting3Name: null
+	,pace_sting3Description: null
+	,pace_sting3Size: null
+	,pace_sting3Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting3",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting3Load"});
+	}
+	,pace_sting3Unload: function() {
+		this.pace_sting3.unload();
+		this.pace_sting3 = null;
+	}
+	,pace_sting4: null
+	,pace_sting4Name: null
+	,pace_sting4Description: null
+	,pace_sting4Size: null
+	,pace_sting4Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting4",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting4Load"});
+	}
+	,pace_sting4Unload: function() {
+		this.pace_sting4.unload();
+		this.pace_sting4 = null;
+	}
+	,pace_sting5: null
+	,pace_sting5Name: null
+	,pace_sting5Description: null
+	,pace_sting5Size: null
+	,pace_sting5Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting5",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting5Load"});
+	}
+	,pace_sting5Unload: function() {
+		this.pace_sting5.unload();
+		this.pace_sting5 = null;
+	}
+	,pace_sting6: null
+	,pace_sting6Name: null
+	,pace_sting6Description: null
+	,pace_sting6Size: null
+	,pace_sting6Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting6",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting6Load"});
+	}
+	,pace_sting6Unload: function() {
+		this.pace_sting6.unload();
+		this.pace_sting6 = null;
+	}
+	,pace_sting7: null
+	,pace_sting7Name: null
+	,pace_sting7Description: null
+	,pace_sting7Size: null
+	,pace_sting7Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting7",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting7Load"});
+	}
+	,pace_sting7Unload: function() {
+		this.pace_sting7.unload();
+		this.pace_sting7 = null;
+	}
+	,pace_sting8: null
+	,pace_sting8Name: null
+	,pace_sting8Description: null
+	,pace_sting8Size: null
+	,pace_sting8Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting8",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting8Load"});
+	}
+	,pace_sting8Unload: function() {
+		this.pace_sting8.unload();
+		this.pace_sting8 = null;
+	}
+	,pace_sting9: null
+	,pace_sting9Name: null
+	,pace_sting9Description: null
+	,pace_sting9Size: null
+	,pace_sting9Load: function(done,failure) {
+		kha_Assets.loadSound("pace_sting9",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "pace_sting9Load"});
+	}
+	,pace_sting9Unload: function() {
+		this.pace_sting9.unload();
+		this.pace_sting9 = null;
+	}
+	,record: null
+	,recordName: null
+	,recordDescription: null
+	,recordSize: null
+	,recordLoad: function(done,failure) {
+		kha_Assets.loadSound("record",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "recordLoad"});
+	}
+	,recordUnload: function() {
+		this.record.unload();
+		this.record = null;
+	}
+	,selector: null
+	,selectorName: null
+	,selectorDescription: null
+	,selectorSize: null
+	,selectorLoad: function(done,failure) {
+		kha_Assets.loadSound("selector",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "selectorLoad"});
+	}
+	,selectorUnload: function() {
+		this.selector.unload();
+		this.selector = null;
+	}
+	,selector_down: null
+	,selector_downName: null
+	,selector_downDescription: null
+	,selector_downSize: null
+	,selector_downLoad: function(done,failure) {
+		kha_Assets.loadSound("selector_down",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "selector_downLoad"});
+	}
+	,selector_downUnload: function() {
+		this.selector_down.unload();
+		this.selector_down = null;
+	}
+	,selector_up: null
+	,selector_upName: null
+	,selector_upDescription: null
+	,selector_upSize: null
+	,selector_upLoad: function(done,failure) {
+		kha_Assets.loadSound("selector_up",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "selector_upLoad"});
+	}
+	,selector_upUnload: function() {
+		this.selector_up.unload();
+		this.selector_up = null;
+	}
+	,win: null
+	,winName: null
+	,winDescription: null
+	,winSize: null
+	,winLoad: function(done,failure) {
+		kha_Assets.loadSound("win",function(sound) {
+			done();
+		},failure,{ fileName : "kha/internal/AssetsBuilder.hx", lineNumber : 146, className : "kha._Assets.SoundList", methodName : "winLoad"});
+	}
+	,winUnload: function() {
+		this.win.unload();
+		this.win = null;
 	}
 	,names: null
 	,__class__: kha__$Assets_SoundList
@@ -68851,9 +69931,11 @@ echo_util_QuadTree.pool = new echo_util_GenericPool_$echo_$util_$QuadTree(echo_u
 echo_util_SAT.norm = new echo_math_Vector2Default(0,0);
 echo_util_SAT.closest = new echo_math_Vector2Default(0,0);
 game_conn_Conn.WS_URL = "wss://pacepd25-e2ef41da108c.herokuapp.com/";
+game_conn_Conn.HTTPS_URL = "https://pacepd25-e2ef41da108c.herokuapp.com/";
 var game_conn_Connection_PING_ITEMS = 40;
 var game_conn_Connection_PING_INTERVAL = 250;
 var game_data_LevelData_levelOrder = [game_data_Level.ArcUp,game_data_Level.HardRight,game_data_Level.OutNBack,game_data_Level.Spiral];
+var game_data_LevelData_vsLevels = [game_data_Level.InTheMiddle,game_data_Level.DiamondMe];
 var game_data_LevelData_levelData = (function($this) {
 	var $r;
 	var _g = new haxe_ds_EnumValueMap();
@@ -68866,15 +69948,17 @@ var game_data_LevelData_levelData = (function($this) {
 	$r = _g;
 	return $r;
 }(this));
+game_data_State.VERSION = "0.-3.0";
 game_data_State.levelBests = new haxe_ds_EnumValueMap();
 var game_data_State_STORAGE_FILE = "pacepd25";
 var game_data_State_testInputs = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,6,6,6,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,6,6,6,6,6,6,6,6,6,6,6,6,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,4,4,4,4,4,4,4,4,4,4,0,0,0,0,2,2,2,2,2,2,2,2,2,2,6,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
 var game_groups_WorldGroup_DELTA = 0.0166666666666666664;
 game_objects_Ship.ACCEL = 150.0;
 game_objects_Ship.DRAG = 150.0;
-game_rollback_Rollback.INPUT_DELAY_FRAMES = 0;
+game_rollback_Rollback.INPUT_DELAY_FRAMES = 3;
 var game_rollback_Rollback_frameModulos = [10000,144,89,55,34,21,13,8,5,3];
 game_scenes_PaceScene.initialized = false;
+game_scenes_MainMenu.optionsVisible = false;
 game_scenes_RaceScene.DELAY_START = 300;
 game_ui_Colors.LIGHT_RED = -2533533;
 game_ui_Colors.DARK_RED = -5492174;
